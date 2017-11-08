@@ -1,4 +1,4 @@
-from .mm import Mycog
+from .mm import MemberManagement
 
 def setup(bot):
-    bot.add_cog(Mycog())
+    bot.add_cog(MemberManagement())
