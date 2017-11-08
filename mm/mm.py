@@ -5,7 +5,9 @@ from random import choice
 import discord
 from discord.ext import commands
 from redbot.core import Config
-from  redbot.core import checks
+from redbot.core import checks
+from redbot.core.bot import Red
+from redbot.core.context import RedContext
 from redbot.core.utils.chat_formatting import box, pagify
 
 BOT_COMMANDER_ROLES = ["Bot Commander", "High-Elder"]
@@ -26,7 +28,7 @@ def grouper(n, iterable, fillvalue=None):
 class MemberManagement:
     """Member Management plugin for Red Discord bot."""
 
-    def __init__(self, bot):
+    def __init__(self, bot: Red):
         """Init."""
         self.bot = bot
         self.config = Config.get_conf(self, identifier=209287691722817536, force_registration=True)
@@ -76,9 +78,9 @@ class MemberManagement:
             help='Macro name. Create using [p]mmset')
         return parser
 
-    @commands.command(pass_context=True)
+    @commands.command()
     @commands.has_any_role(*BOT_COMMANDER_ROLES)
-    async def mm(self, ctx, *args):
+    async def mm(self, ctx: RedContext, *args):
         """Member management by roles.
 
         !mm [-h] [-x EXCLUDE [EXCLUDE ...]]
@@ -120,7 +122,7 @@ class MemberManagement:
         try:
             pargs = parser.parse_args(args)
         except SystemExit:
-            await self.bot.send_cmd_help(ctx)
+            await ctx.send_help()
             return
 
         option_output_mentions = (pargs.output == 'mention')
@@ -133,12 +135,12 @@ class MemberManagement:
         option_none = (pargs.result == 'none')
         option_only_role = pargs.onlyrole
 
-        server = ctx.message.server
-        server_roles_names = [r.name.lower() for r in server.roles]
-        plus = set([r.lower() for r in pargs.roles if r.lower() in server_roles_names])
+        guild = ctx.message.guild
+        guild_roles_names = [r.name.lower() for r in guild.roles]
+        plus = set([r.lower() for r in pargs.roles if r.lower() in guild_roles_names])
         minus = set()
         if pargs.exclude is not None:
-            minus = set([r.lower() for r in pargs.exclude if r.lower() in server_roles_names])
+            minus = set([r.lower() for r in pargs.exclude if r.lower() in guild_roles_names])
 
         out = ["**Member Management**"]
 
@@ -162,14 +164,14 @@ class MemberManagement:
             out.append("but not these roles: {}".format(
                 ', '.join(minus)))
 
-        await self.bot.say('\n'.join(out))
+        await ctx.send('\n'.join(out))
 
         # only output if argument is supplied
         if len(plus):
             # include roles with '+' flag
             # exclude roles with '-' flag
             out_members = set()
-            for m in server.members:
+            for m in guild.members:
                 roles = set([r.name.lower() for r in m.roles])
                 if option_everyone:
                     roles.add('@everyone')
@@ -182,7 +184,7 @@ class MemberManagement:
                 out_members = [m for m in out_members if len(m.roles) == 2]
 
             suffix = 's' if len(out_members) > 1 else ''
-            await self.bot.say("**Found {} member{}.**".format(
+            await ctx.send("**Found {} member{}.**".format(
                 len(out_members), suffix))
 
             # sort join
@@ -201,38 +203,38 @@ class MemberManagement:
                 elif option_csv:
                     for page in pagify(
                             self.get_member_csv(out_members), shorten_by=50):
-                        await self.bot.say(page)
+                        await ctx.send(page)
                 elif option_list:
                     for page in pagify(
                             self.get_member_list(out_members), shorten_by=50):
-                        await self.bot.say(page)
+                        await ctx.send(page)
                 else:
-                    for data in self.get_member_embeds(out_members, ctx.message.timestamp):
+                    for data in self.get_member_embeds(out_members, ctx.message.created_at):
                         try:
-                            await self.bot.say(embed=data)
+                            await ctx.send(embed=data)
                         except discord.HTTPException:
-                            await self.bot.say(
+                            await ctx.send(
                                 "I need the `Embed links` permission "
                                 "to send this")
 
             # Display a copy-and-pastable list
             if option_output_mentions | option_output_mentions_only:
                 mention_list = [m.mention for m in out_members]
-                await self.bot.say(
+                await ctx.send(
                     "Copy and paste these in message to mention users listed:")
 
                 out = ' '.join(mention_list)
                 for page in pagify(out, shorten_by=24):
-                    await self.bot.say(box(page))
+                    await ctx.send(box(page))
 
             # Display a copy-and-pastable list of ids
             if option_output_id:
                 id_list = [m.id for m in out_members]
-                await self.bot.say(
+                await ctx.send(
                     "Copy and paste these in message to mention users listed:")
                 out = ' '.join(id_list)
                 for page in pagify(out, shorten_by=24):
-                    await self.bot.say(box(page))
+                    await ctx.send(box(page))
 
     @staticmethod
     def get_member_csv(members):
@@ -279,51 +281,51 @@ class MemberManagement:
             embeds.append(data)
         return embeds
 
-    def get_server_roles(self, server, *role_names):
-        """Return list of server roles object by name."""
-        if server is None:
+    def get_guild_roles(self, guild, *role_names):
+        """Return list of guild roles object by name."""
+        if guild is None:
             return []
         if len(role_names):
             roles_lower = [r.lower() for r in role_names]
             roles = [
-                r for r in server.roles if r.name.lower() in roles_lower
+                r for r in guild.roles if r.name.lower() in roles_lower
             ]
         else:
-            roles = server.roles
+            roles = guild.roles
         return roles
 
     @commands.command(no_pm=True)
-    async def listroles(self, ctx, *roles):
-        """List all the roles on the server."""
-        server = ctx.message.server
-        if server is None:
+    async def listroles(self, ctx: RedContext, *roles):
+        """List all the roles on the guild."""
+        guild = ctx.message.guild
+        if guild is None:
             return
         out = []
-        out.append("__List of roles on {}__".format(server.name))
-        roles_to_list = self.get_server_roles(server, *roles)
+        out.append("__List of roles on {}__".format(guild.name))
+        roles_to_list = self.get_guild_roles(guild, *roles)
 
         out_roles = {}
         for role in roles_to_list:
             out_roles[role.id] = {'role': role, 'count': 0}
-        for member in server.members:
+        for member in guild.members:
             for role in member.roles:
                 if role in roles_to_list:
                     out_roles[role.id]['count'] += 1
-        for role in server.role_hierarchy:
+        for role in guild.role_hierarchy:
             if role in roles_to_list:
                 out.append(
                     "**{}** ({} members)".format(
                         role.name, out_roles[role.id]['count']))
         for page in pagify("\n".join(out), shorten_by=12):
-            await self.bot.say(page)
+            await ctx.send(page)
 
     @commands.command(no_pm=True)
-    async def listrolecolors(self, ctx, *roles):
-        """List role colors on the server."""
-        server = ctx.message.server
-        role_objs = self.get_server_roles(server, *roles)
+    async def listrolecolors(self, ctx: RedContext, *roles):
+        """List role colors on the guild."""
+        guild = ctx.message.guild
+        role_objs = self.get_guild_roles(guild, *roles)
         out = []
-        for role in server.role_hierarchy:
+        for role in guild.role_hierarchy:
             if role in role_objs:
                 rgb = role.color.to_tuple()
                 out.append('**{name}**: {color_rgb}, {color_hex}'.format(
@@ -332,11 +334,11 @@ class MemberManagement:
                     color_hex='#{:02x}{:02x}{:02x}'.format(rgb[0], rgb[1], rgb[2])
                 ))
         for page in pagify("\n".join(out), shorten_by=12):
-            await self.bot.say(page)
+            await ctx.send(page)
 
     @commands.command(no_pm=True)
     @checks.mod_or_permissions(manage_roles=True)
-    async def changerole(self, ctx, member: discord.Member = None, *roles: str):
+    async def changerole(self, ctx: RedContext, member: discord.Member = None, *roles: str):
         """Change roles of a user.
 
         Example: !changerole SML +Delta "-Foxtrot Lead" "+Delta Lead"
@@ -346,16 +348,16 @@ class MemberManagement:
         + for role addition
         - for role removal
         """
-        server = ctx.message.server
+        guild = ctx.message.guild
         author = ctx.message.author
         if member is None:
-            await self.bot.say("You must specify a member")
+            await ctx.send("You must specify a member")
             return
         elif roles is None or not roles:
-            await self.bot.say("You must specify a role.")
+            await ctx.send("You must specify a role.")
             return
 
-        server_role_names = [r.name for r in server.roles]
+        guild_role_names = [r.name for r in guild.roles]
         role_args = []
         flags = ['+', '-']
         for role in roles:
@@ -363,14 +365,14 @@ class MemberManagement:
             flag = role[0] if has_flag else '+'
             name = role[1:] if has_flag else role
 
-            if name.lower() in [r.lower() for r in server_role_names]:
+            if name.lower() in [r.lower() for r in guild_role_names]:
                 role_args.append({'flag': flag, 'name': name})
 
         plus = [r['name'].lower() for r in role_args if r['flag'] == '+']
         minus = [r['name'].lower() for r in role_args if r['flag'] == '-']
         # disallowed_roles = [r.lower() for r in DISALLOWED_ROLES]
 
-        for role in server.roles:
+        for role in guild.roles:
             role_in_minus = role.name.lower() in minus
             role_in_plus = role.name.lower() in plus
             role_in_either = role_in_minus or role_in_plus
@@ -378,60 +380,60 @@ class MemberManagement:
             if role_in_either:
                 # respect role hiearchy
                 if role.position >= author.top_role.position:
-                    await self.bot.say(
+                    await ctx.send(
                         "{} does not have permission to edit {}.".format(
                             author.display_name, role.name))
                 else:
                     try:
                         if role_in_minus:
-                            await self.bot.remove_roles(member, role)
+                            await member.remove_roles(role)
                         if role_in_plus:
-                            await self.bot.add_roles(member, role)
+                            await member.add_roles(role)
                     except discord.Forbidden:
-                        await self.bot.say(
+                        await ctx.send(
                             "{} does not have permission to edit {}’s roles.".format(
                                 author.display_name, member.display_name))
                         continue
                     except discord.HTTPException:
                         if role_in_minus:
-                            await self.bot.say(
+                            await ctx.send(
                                 "Failed to remove {}.").format(role.name)
                             continue
                         if role_in_plus:
-                            await self.bot.say(
+                            await ctx.send(
                                 "failed to add {}.").format(role.name)
                             continue
                     else:
                         if role_in_minus:
-                            await self.bot.say(
+                            await ctx.send(
                                 "Removed {} from {}".format(
                                     role.name, member.display_name))
                         if role_in_plus:
-                            await self.bot.say(
+                            await ctx.send(
                                 "Added {} for {}".format(
                                     role.name, member.display_name))
 
     @commands.command(no_pm=True)
     @checks.mod_or_permissions(manage_roles=True)
-    async def searchmember(self, ctx, name=None):
-        """Search member on server by name."""
+    async def searchmember(self, ctx: RedContext, name=None):
+        """Search member on guild by name."""
         if name is None:
-            await self.bot.send_cmd_help(ctx)
+            await ctx.send_help()
             return
 
-        server = ctx.message.server
+        guild = ctx.message.guild
         results = []
-        for member in server.members:
+        for member in guild.members:
             for member_name in [member.display_name, member.name]:
                 if name.lower() in member_name.lower():
                     results.append(member)
                     break
 
         if not len(results):
-            await self.bot.say("Cannot find any users with that name.")
+            await ctx.send("Cannot find any users with that name.")
             return
 
-        await self.bot.say('Found {} members.'.format(len(results)))
+        await ctx.send('Found {} members.'.format(len(results)))
 
         for member in results:
             out = [
@@ -442,24 +444,24 @@ class MemberManagement:
                     [r.name for r in member.roles if not r.is_everyone])),
                 'id: {}'.format(member.id)
             ]
-            await self.bot.say('\n'.join(out))
+            await ctx.send('\n'.join(out))
 
     @commands.command(no_pm=True)
     @checks.mod_or_permissions(manage_roles=True)
-    async def addrole2role(self, ctx, with_role_name, to_add_role_name):
+    async def addrole2role(self, ctx: RedContext, with_role_name, to_add_role_name):
         """Add a role to users with a specific role."""
-        server = ctx.message.server
-        with_role = discord.utils.get(server.roles, name=with_role_name)
-        to_add_role = discord.utils.get(server.roles, name=to_add_role_name)
+        guild = ctx.message.guild
+        with_role = discord.utils.get(guild.roles, name=with_role_name)
+        to_add_role = discord.utils.get(guild.roles, name=to_add_role_name)
         if with_role is None:
-            await self.bot.say("Cannot find the role **{}** on this server.".format(with_role_name))
+            await ctx.send("Cannot find the role **{}** on this guild.".format(with_role_name))
             return
         if to_add_role is None:
-            await self.bot.say("Cannot find the role **{}** on this server.".format(to_add_role_name))
+            await ctx.send("Cannot find the role **{}** on this guild.".format(to_add_role_name))
             return
 
-        server_members = [member for member in server.members]
-        for member in server_members:
+        guild_members = [member for member in guild.members]
+        for member in guild_members:
             if with_role in member.roles:
                 if to_add_role not in member.roles:
                     try:
@@ -469,7 +471,7 @@ class MemberManagement:
 
     @commands.command(no_pm=True)
     @checks.mod_or_permissions(manage_roles=True)
-    async def multiaddrole(self, ctx, role, *members: discord.Member):
+    async def multiaddrole(self, ctx: RedContext, role, *members: discord.Member):
         """Add a role to multiple users.
 
         !multiaddrole rolename User1 User2 User3
@@ -479,7 +481,7 @@ class MemberManagement:
 
     @commands.command(no_pm=True)
     @checks.mod_or_permissions(manage_roles=True)
-    async def multiremoverole(self, ctx, role, *members: discord.Member):
+    async def multiremoverole(self, ctx: RedContext, role, *members: discord.Member):
         """Remove a role from multiple users.
 
         !multiremoverole rolename User1 User2 User3
@@ -490,16 +492,16 @@ class MemberManagement:
 
     @commands.command(no_pm=True)
     @checks.mod_or_permissions(manage_roles=True)
-    async def channelperm(self, ctx, member: discord.Member):
+    async def channelperm(self, ctx: RedContext, member: discord.Member):
         """Return channels viewable by member."""
         author = ctx.message.author
-        server = ctx.message.server
+        guild = ctx.message.guild
         if not member:
             member = author
 
-        text_channels = [c for c in server.channels if c.type == discord.ChannelType.text]
+        text_channels = [c for c in guild.channels if c.type == discord.ChannelType.text]
         text_channels = sorted(text_channels, key=lambda c: c.position)
-        voice_channels = [c for c in server.channels if c.type == discord.ChannelType.voice]
+        voice_channels = [c for c in guild.channels if c.type == discord.ChannelType.voice]
         voice_channels = sorted(voice_channels, key=lambda c: c.position)
 
         out = []
@@ -518,4 +520,4 @@ class MemberManagement:
                 out.append("{channel}: {perms}".format(channel=c.name, perms=', '.join(perms)))
 
         for page in pagify('\n'.join(out)):
-            await self.bot.say(page)
+            await ctx.send(page)
