@@ -16,9 +16,6 @@ import datetime as dt
 
 from random import choice
 
-DAYS = 2
-LIMIT = 10000
-
 
 def random_discord_color():
     """Return random color as an integer."""
@@ -38,20 +35,78 @@ def grouper(n, iterable, fillvalue=None):
         for t in itertools.zip_longest(*args))
 
 class GuildLog:
-    def __init__(self, guild, days=DAYS):
+    def __init__(self, guild):
         self.guild = guild
-        self.days = days
 
-    def channel_embeds(self, log):
+    async def user_history_embed(self, member: discord.Member, days=2, limit=10000):
+        after = dt.datetime.utcnow() - dt.timedelta(days=days)
+        em = discord.Embed(
+            title="{}#{}".format(member.name, member.discriminator),
+            description="Channel activity in the last {} days.".format(days),
+            color=member.color
+        )
+        em.set_thumbnail(url=member.avatar_url)
+
+        last_seen = None
+        history = OrderedDict()
+        for channel in self.guild.text_channels:
+            async for message in channel.history(after=after, limit=limit, reverse=False):
+                if message.author == member:
+                    channel = message.channel
+                    if channel.id not in history:
+                        history[channel.id] = 0
+                    history[channel.id] += 1
+                    if last_seen is None:
+                        last_seen = message.created_at
+                    last_seen = max(last_seen, message.created_at)
+
+        em.add_field(
+            name="Last seen",
+            value="{}\n{}".format(
+                last_seen.strftime('%a, %b %d, %Y, %H:%M:%S UTC'),
+                humanize.naturaltime(dt.datetime.utcnow() - last_seen)
+            ),
+            inline=False
+        )
+
+        history = OrderedDict(sorted(history.items(), key=lambda item: item[1], reverse=True))
+
+        for channel_id, count in history.items():
+            em.add_field(
+                name=self.guild.get_channel(channel_id).name,
+                value=count
+            )
+
+        return em
+
+    async def channel_history(self, after=None, limit=10000):
+        history = []
+        for channel in self.guild.text_channels:
+            authors = []
+            async for message in channel.history(after=after, limit=limit, reverse=False):
+                authors.append(message.author)
+            if len(authors) > 0:
+                history.append({
+                    'channel_id': channel.id,
+                    'rank': Counter(authors).most_common(),
+                    'count': len(authors)
+                })
+        history = sorted(history, key=lambda item: item['count'], reverse=True)
+        return history
+
+    async def channel_history_embeds(self, days=2, limit=10000):
+        """List of embeds with channel history."""
+        after = dt.datetime.utcnow() - dt.timedelta(days=days)
+        history = await self.channel_history(after=after, limit=limit)
 
         em = discord.Embed(
             title=self.guild.name,
-            description="Channel activity in the last {} days.".format(self.days),
+            description="Channel activity in the last {} days.".format(days),
             color=discord.Color.red()
         )
         em.set_thumbnail(url=self.guild.icon_url)
         embeds = [em]
-        for log_groups in grouper(12, log):
+        for log_groups in grouper(12, history):
             em = discord.Embed(
                 title=self.guild.name,
                 color=discord.Color.red()
@@ -82,84 +137,21 @@ class DStats:
             await ctx.send_help()
 
     @dstats.command(name="user")
-    async def dstats_user(self, ctx: RedContext, member: discord.Member, limit=LIMIT, days=DAYS):
+    async def dstats_user(self, ctx: RedContext, member: discord.Member, limit=10000, days=7):
         """User stats."""
-        log = OrderedDict()
-        after = dt.datetime.utcnow() - dt.timedelta(days=days)
-
         async with ctx.typing():
-            em = discord.Embed(
-                title="{}#{}".format(member.name, member.discriminator),
-                description="Channel activity in the last {} days.".format(days),
-                color=member.color
-            )
-            em.set_thumbnail(url=member.avatar_url)
-
-            last_seen = None
-            for channel in ctx.guild.text_channels:
-                async for message in channel.history(after=after, limit=limit, reverse=False):
-                    if message.author == member:
-                        channel = message.channel
-                        if channel.id not in log:
-                            log[channel.id] = 0
-                        log[channel.id] += 1
-                        if last_seen is None:
-                            last_seen = message.created_at
-                        last_seen = max(last_seen, message.created_at)
-
-            em.add_field(
-                name="Last seen",
-                value="{}\n{}".format(
-                    last_seen.strftime('%a, %b %d, %Y, %H:%M:%S UTC'),
-                    humanize.naturaltime(dt.datetime.utcnow() - last_seen)
-                )
-            )
-
-            log = OrderedDict(sorted(log.items(), key=lambda item: item[1], reverse=True))
-
-            for channel_id, count in log.items():
-                em.add_field(
-                    name=ctx.guild.get_channel(channel_id).name,
-                    value=count
-                )
-
+            glog = GuildLog(ctx.guild)
+            em = await glog.user_history_embed(member, days=days, limit=limit)
             await ctx.send(embed=em)
 
     @dstats.command(name="channels")
     @checks.mod_or_permissions()
-    async def dstats_channels(self, ctx, limit=LIMIT, days=DAYS):
+    async def dstats_channels(self, ctx, limit=10000, days=2):
         """All users stats."""
-        log = []
-        after = dt.datetime.utcnow() - dt.timedelta(days=days)
-
         async with ctx.typing():
-            # em = discord.Embed(
-            #     title="{}".format(ctx.guild.name),
-            #     description="Channel activity in the last {} days.".format(days),
-            #     color=discord.Color.red()
-            # )
-            # em.set_thumbnail(url=ctx.guild.icon_url)
-            for channel in ctx.guild.text_channels:
-                authors = []
-                async for message in channel.history(after=after, limit=limit, reverse=False):
-                    authors.append(message.author)
-                if len(authors) > 0:
-                    log.append({
-                        'channel_id': channel.id,
-                        'rank': Counter(authors).most_common(),
-                        'count': len(authors)
-                    })
-            log = sorted(log, key=lambda item: item['count'], reverse=True)
-
-            # for channel_id, item in log.items():
-            #     name = "{}: {}".format(ctx.guild.get_channel(channel_id).name, item['count'])
-            #     value = ', '.join(['{}: {}'.format(author.display_name, count) for author, count in item['rank']])
-            #     em.add_field(name=name, value=value)
-            #
-            # await ctx.send(embed=em)
-
-            glog = GuildLog(ctx.guild, days=days)
-            for em in glog.channel_embeds(log):
+            glog = GuildLog(ctx.guild)
+            embeds = await glog.channel_history_embeds(days, limit)
+            for em in embeds:
                 await ctx.send(embed=em)
 
 
