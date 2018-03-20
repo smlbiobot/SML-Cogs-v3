@@ -48,17 +48,22 @@ class GuildLog:
         em.set_thumbnail(url=member.avatar_url)
 
         last_seen = None
+        skipped_channels = False
         history = OrderedDict()
         for channel in self.guild.text_channels:
-            async for message in channel.history(after=after, limit=limit, reverse=False):
-                if message.author == member:
-                    channel = message.channel
-                    if channel.id not in history:
-                        history[channel.id] = 0
-                    history[channel.id] += 1
-                    if last_seen is None:
-                        last_seen = message.created_at
-                    last_seen = max(last_seen, message.created_at)
+            try:
+                async for message in channel.history(after=after, limit=limit, reverse=False):
+                    if message.author == member:
+                        channel = message.channel
+                        if channel.id not in history:
+                            history[channel.id] = 0
+                        history[channel.id] += 1
+                        if last_seen is None:
+                            last_seen = message.created_at
+                        last_seen = max(last_seen, message.created_at)
+            except discord.errors.Forbidden:
+                skipped_channels = True
+                pass
 
         em.add_field(
             name="Last seen",
@@ -76,21 +81,31 @@ class GuildLog:
                 name=self.guild.get_channel(channel_id).name,
                 value=count
             )
-
+        if skipped_channels:
+            em.set_footer(text='May be incomplete: cannot access all channels.')
         return em
 
     async def channel_history(self, after=None, limit=10000):
         history = []
         for channel in self.guild.text_channels:
             authors = []
-            async for message in channel.history(after=after, limit=limit, reverse=False):
-                authors.append(message.author)
-            if len(authors) > 0:
+            try:
+                async for message in channel.history(after=after, limit=limit, reverse=False):
+                    authors.append(message.author)
+                if len(authors) > 0:
+                    history.append({
+                        'channel_id': channel.id,
+                        'rank': Counter(authors).most_common(),
+                        'count': len(authors)
+                    })
+            except discord.errors.Forbidden:
+                authors.append('No perms')
                 history.append({
                     'channel_id': channel.id,
                     'rank': Counter(authors).most_common(),
-                    'count': len(authors)
-                })
+                    'count': 0
+                    })
+
         history = sorted(history, key=lambda item: item['count'], reverse=True)
         return history
 
@@ -111,10 +126,19 @@ class GuildLog:
                 title=self.guild.name,
                 color=discord.Color.red()
             )
+
+            no_perm_list = []
             for item in log_groups:
-                name = "{}: {}".format(self.guild.get_channel(item['channel_id']).name, item['count'])
-                value = ', '.join(['{}: {}'.format(author.display_name, count) for author, count in item['rank']])
-                em.add_field(name=name, value=value)
+                try:
+                    name = "{}: {}".format(self.guild.get_channel(item['channel_id']).name, item['count'])
+                    value = ', '.join(['{}: {}'.format(author.display_name, count) for author, count in item['rank']])
+                    em.add_field(name=name, value=value, inline=False)
+                except AttributeError:
+                    no_perm_channel = "{}".format(self.guild.get_channel(item['channel_id']).name)
+                    no_perm_list.append(no_perm_channel)
+            no_permissions = ', '.join(no_perm_list)
+            if no_permissions:
+                em.add_field(name=no_permissions, value='No permissions to read these channels.', inline=False)
             embeds.append(em)
         return embeds
 
@@ -153,11 +177,3 @@ class DStats:
             embeds = await glog.channel_history_embeds(days, limit)
             for em in embeds:
                 await ctx.send(embed=em)
-
-
-
-
-
-
-
-
