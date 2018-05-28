@@ -10,11 +10,14 @@ from collections import OrderedDict
 from collections import Counter
 import humanize
 
+import logging
 import argparse
 
 import datetime as dt
 
 from random import choice
+
+logger = logging.getLogger(__name__)
 
 
 def random_discord_color():
@@ -44,12 +47,15 @@ class GuildLog:
         history = []
         last_seen = None
         for channel in guild.text_channels:
-            async for message in channel.history(after=after, limit=limit, reverse=False):
-                if message.author == member:
-                    history.append(channel.id)
-                if last_seen is None:
-                    last_seen = message.created_at
-                last_seen = max(last_seen, message.created_at)
+            try:
+                async for message in channel.history(after=after, limit=limit, reverse=False):
+                    if message.author == member:
+                        history.append(channel.id)
+                    if last_seen is None:
+                        last_seen = message.created_at
+                    last_seen = max(last_seen, message.created_at)
+            except discord.errors.Forbidden as e:
+                logger.exception("No permission for {}: {}".format(channel.name, channel.id))
 
         return last_seen, Counter(history).most_common()
 
@@ -59,14 +65,17 @@ class GuildLog:
         last_seen = None
         history = OrderedDict()
         for channel in guild.text_channels:
-            async for message in channel.history(after=after, limit=limit, reverse=False):
-                if message.author == member:
-                    if channel.id not in history:
-                        history[channel.id] = 0
-                    history[channel.id] += 1
-                    if last_seen is None:
-                        last_seen = message.created_at
-                    last_seen = max(last_seen, message.created_at)
+            try:
+                async for message in channel.history(after=after, limit=limit, reverse=False):
+                    if message.author == member:
+                        if channel.id not in history:
+                            history[channel.id] = 0
+                        history[channel.id] += 1
+                        if last_seen is None:
+                            last_seen = message.created_at
+                        last_seen = max(last_seen, message.created_at)
+            except discord.errors.Forbidden as e:
+                logger.exception("No permission for {}: {}".format(channel.name, channel.id))
         return last_seen, OrderedDict(sorted(history.items(), key=lambda item: item[1], reverse=True))
 
     async def user_history_embed(self, member: discord.Member, days=2, limit=10000):
@@ -104,19 +113,22 @@ class GuildLog:
         history = []
         for channel in self.guild.text_channels:
             authors = []
-            async for message in channel.history(after=after, limit=limit, reverse=False):
-                authors.append(message.author)
-            if len(authors) > 0:
-                history.append({
-                    'channel_id': channel.id,
-                    'rank': Counter(authors).most_common(),
-                    'count': len(authors)
-                })
+            try:
+                async for message in channel.history(after=after, limit=limit, reverse=False):
+                    authors.append(message.author)
+                if len(authors) > 0:
+                    history.append({
+                        'channel_id': channel.id,
+                        'rank': Counter(authors).most_common(),
+                        'count': len(authors)
+                    })
+            except Exception as e:
+                logger.exception(e)
         history = sorted(history, key=lambda item: item['count'], reverse=True)
         return history
 
-    async def channel_history_embeds(self, days=2, limit=10000):
-        """List of embeds with channel history."""
+    async def channels_history_embeds(self, days=2, limit=10000):
+        """List of embeds with all channel history."""
         after = dt.datetime.utcnow() - dt.timedelta(days=days)
         history = await self.channel_history(after=after, limit=limit)
 
@@ -135,6 +147,47 @@ class GuildLog:
             for item in log_groups:
                 name = "{}: {}".format(self.guild.get_channel(item['channel_id']).name, item['count'])
                 value = ', '.join(['{}: {}'.format(author.display_name, count) for author, count in item['rank']])
+                em.add_field(name=name, value=value)
+            embeds.append(em)
+        return embeds
+
+    async def channel_history_embeds(self, channel: discord.TextChannel, days=2, limit=10000):
+        """List of embeds with one channel history."""
+        after = dt.datetime.utcnow() - dt.timedelta(days=days)
+
+        history = []
+        authors = []
+        try:
+            async for message in channel.history(after=after, limit=limit, reverse=False):
+                authors.append(message.author)
+            if len(authors) > 0:
+                history.append({
+                    'channel_id': channel.id,
+                    'rank': Counter(authors).most_common(),
+                    'count': len(authors)
+                })
+        except Exception as e:
+            logger.exception(e)
+
+        history = sorted(history, key=lambda item: item['count'], reverse=True)
+
+        em = discord.Embed(
+            title=self.guild.name,
+            description="Channel activity in the last {} days.".format(days),
+            color=discord.Color.red()
+        )
+        em.set_thumbnail(url=self.guild.icon_url)
+        embeds = [em]
+        for log_groups in grouper(12, history):
+            em = discord.Embed(
+                title=self.guild.name,
+                color=discord.Color.red()
+            )
+            for item in log_groups:
+                name = "{}: {}".format(self.guild.get_channel(item['channel_id']).name, item['count'])
+                value = ', '.join(['{}: {}'.format(author.display_name, count) for author, count in item['rank']])
+                if len(value) > 1024:
+                    value = value[:1024]
                 em.add_field(name=name, value=value)
             embeds.append(em)
         return embeds
@@ -166,13 +219,23 @@ class DStats:
             em = await glog.user_history_embed(member, days=days, limit=limit)
             await ctx.send(embed=em)
 
-    @dstats.command(name="channels")
+    @dstats.command(name="channel")
     @checks.mod_or_permissions()
-    async def dstats_channels(self, ctx, limit=10000, days=2):
+    async def dstats_channel(self, ctx, channel: discord.TextChannel, limit=10000, days=7):
         """All users stats."""
         async with ctx.typing():
             glog = GuildLog(ctx.guild)
-            embeds = await glog.channel_history_embeds(days, limit)
+            embeds = await glog.channel_history_embeds(channel, days=days, limit=limit)
+            for em in embeds:
+                await ctx.send(embed=em)
+
+    @dstats.command(name="channels")
+    @checks.mod_or_permissions()
+    async def dstats_channels(self, ctx:RedContext, limit=10000, days=2):
+        """All users stats."""
+        async with ctx.typing():
+            glog = GuildLog(ctx.guild)
+            embeds = await glog.channels_history_embeds(days, limit)
             for em in embeds:
                 await ctx.send(embed=em)
 
