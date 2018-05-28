@@ -38,28 +38,46 @@ class GuildLog:
     def __init__(self, guild):
         self.guild = guild
 
-    async def user_history_embed(self, member: discord.Member, days=2, limit=10000):
+    async def user_history(self, guild: discord.Guild, member: discord.Member, days=2, limit=10000):
+        """User history in a guild."""
         after = dt.datetime.utcnow() - dt.timedelta(days=days)
-        em = discord.Embed(
-            title="{}#{}".format(member.name, member.discriminator),
-            description="Channel activity in the last {} days.".format(days),
-            color=member.color
-        )
-        em.set_thumbnail(url=member.avatar_url)
-
+        history = []
         last_seen = None
-        history = OrderedDict()
-        for channel in self.guild.text_channels:
+        for channel in guild.text_channels:
             async for message in channel.history(after=after, limit=limit, reverse=False):
                 if message.author == member:
-                    channel = message.channel
+                    history.append(channel.id)
+                if last_seen is None:
+                    last_seen = message.created_at
+                last_seen = max(last_seen, message.created_at)
+
+        return last_seen, Counter(history).most_common()
+
+    async def user_history_2(self, guild: discord.Guild, member: discord.Member, days=2, limit=10000):
+        """User history in a guild."""
+        after = dt.datetime.utcnow() - dt.timedelta(days=days)
+        last_seen = None
+        history = OrderedDict()
+        for channel in guild.text_channels:
+            async for message in channel.history(after=after, limit=limit, reverse=False):
+                if message.author == member:
                     if channel.id not in history:
                         history[channel.id] = 0
                     history[channel.id] += 1
                     if last_seen is None:
                         last_seen = message.created_at
                     last_seen = max(last_seen, message.created_at)
+        return last_seen, OrderedDict(sorted(history.items(), key=lambda item: item[1], reverse=True))
 
+    async def user_history_embed(self, member: discord.Member, days=2, limit=10000):
+        last_seen, history = await self.user_history_2(self.guild, member, days, limit)
+
+        em = discord.Embed(
+            title="{}#{}".format(member.name, member.discriminator),
+            description="Channel activity in the last {} days.".format(days),
+            color=member.color
+        )
+        em.set_thumbnail(url=member.avatar_url)
         em.add_field(
             name="Last seen",
             value="{}\n{}".format(
@@ -69,9 +87,12 @@ class GuildLog:
             inline=False
         )
 
-        history = OrderedDict(sorted(history.items(), key=lambda item: item[1], reverse=True))
+        if isinstance(history, dict):
+            items = history.items()
+        else:
+            items = history
 
-        for channel_id, count in history.items():
+        for channel_id, count in items:
             em.add_field(
                 name=self.guild.get_channel(channel_id).name,
                 value=count
@@ -137,6 +158,7 @@ class DStats:
             await ctx.send_help()
 
     @dstats.command(name="user")
+    @checks.mod_or_permissions()
     async def dstats_user(self, ctx: RedContext, member: discord.Member, limit=10000, days=7):
         """User stats."""
         async with ctx.typing():
