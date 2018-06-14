@@ -54,7 +54,6 @@ def parser(cat):
     )
     parser.add_argument(
         '-d', '--days',
-        nargs=1,
         help='Last N days',
         type=int,
         default=7
@@ -158,7 +157,7 @@ class GuildLog:
 
         em = discord.Embed(
             title=self.guild.name,
-            description="Channel activity in the last {} days.".format(days),
+
             color=discord.Color.red()
         )
         em.set_thumbnail(url=self.guild.icon_url)
@@ -166,6 +165,7 @@ class GuildLog:
         for log_groups in grouper(12, history):
             em = discord.Embed(
                 title=self.guild.name,
+                description="Channel activity in the last {} days.".format(days),
                 color=discord.Color.red()
             )
             for item in log_groups:
