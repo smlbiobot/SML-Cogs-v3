@@ -1,21 +1,19 @@
-import discord
+import argparse
+import datetime as dt
 import itertools
+import logging
+from collections import Counter
+from collections import OrderedDict
+from random import choice
+
+import discord
+import humanize
 from discord.ext import commands
 from redbot.core import Config
 from redbot.core import checks
 from redbot.core.bot import Red
-from redbot.core.context import RedContext
-from redbot.core.utils.chat_formatting import box, pagify
-from collections import OrderedDict
-from collections import Counter
-import humanize
-
-import logging
-import argparse
-
-import datetime as dt
-
-from random import choice
+# from redbot.core.context import RedContext
+from redbot.core.commands import Context
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +23,7 @@ def random_discord_color():
     color = ''.join([choice('0123456789ABCDEF') for x in range(6)])
     color = int(color, 16)
     return discord.Color(value=color)
+
 
 def grouper(n, iterable, fillvalue=None):
     """Helper function to split lists.
@@ -60,14 +59,14 @@ def parser(cat):
     )
     parser.add_argument(
         '-l', '--limit',
-        nargs=1,
         help='Limit N messages',
         type=int,
         default=10000
     )
     return parser
 
-def get_guild_roles(guild:discord.Guild, names):
+
+def get_guild_roles(guild: discord.Guild, names):
     """Given a list of role names, get list of guild Role objects."""
     if not names:
         return []
@@ -77,6 +76,7 @@ def get_guild_roles(guild:discord.Guild, names):
         if r.name.lower() in lower_names:
             o.append(r)
     return o
+
 
 class GuildLog:
     def __init__(self, guild):
@@ -222,6 +222,7 @@ class GuildLog:
             embeds.append(em)
         return embeds
 
+
 class DStats:
     """Discord Statistics"""
 
@@ -235,14 +236,14 @@ class DStats:
         self.config.register_guild(**default_guild)
 
     @commands.group()
-    async def dstats(self, ctx: RedContext):
+    async def dstats(self, ctx: Context):
         """Discord stats."""
         if ctx.invoked_subcommand is None:
             await ctx.send_help()
 
     @dstats.command(name="user")
     @checks.mod_or_permissions()
-    async def dstats_user(self, ctx: RedContext, member: discord.Member, limit=10000, days=7):
+    async def dstats_user(self, ctx: Context, member: discord.Member, limit=10000, days=7):
         """User stats."""
         async with ctx.typing():
             glog = GuildLog(ctx.guild)
@@ -282,18 +283,10 @@ class DStats:
 
     @dstats.command(name="channels")
     @checks.mod_or_permissions()
-    async def dstats_channels(self, ctx:RedContext, ):
+    async def dstats_channels(self, ctx: Context):
         """All users stats."""
         async with ctx.typing():
             glog = GuildLog(ctx.guild)
             embeds = await glog.channels_history_embeds()
             for em in embeds:
                 await ctx.send(embed=em)
-
-
-
-
-
-
-
-
