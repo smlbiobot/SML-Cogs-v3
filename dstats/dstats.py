@@ -156,7 +156,7 @@ class GuildLog:
         history = await self.channel_history(after=after, limit=limit)
 
         embeds = []
-        for log_groups in grouper(12, history):
+        for log_groups in grouper(4, history):
             em = discord.Embed(
                 title=self.guild.name,
                 description="Channel activity in the last {} days.".format(days),
