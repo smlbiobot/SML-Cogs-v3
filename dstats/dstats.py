@@ -155,19 +155,14 @@ class GuildLog:
         after = dt.datetime.utcnow() - dt.timedelta(days=days)
         history = await self.channel_history(after=after, limit=limit)
 
-        em = discord.Embed(
-            title=self.guild.name,
-
-            color=discord.Color.red()
-        )
-        em.set_thumbnail(url=self.guild.icon_url)
-        embeds = [em]
+        embeds = []
         for log_groups in grouper(12, history):
             em = discord.Embed(
                 title=self.guild.name,
                 description="Channel activity in the last {} days.".format(days),
                 color=discord.Color.red()
             )
+            em.set_thumbnail(url=self.guild.icon_url)
             for item in log_groups:
                 name = "{}: {}".format(self.guild.get_channel(item['channel_id']).name, item['count'])
                 value = ', '.join(['{}: {}'.format(author.display_name, count) for author, count in item['rank']])
