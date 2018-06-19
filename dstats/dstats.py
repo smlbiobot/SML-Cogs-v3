@@ -150,25 +150,31 @@ class GuildLog:
         history = sorted(history, key=lambda item: item['count'], reverse=True)
         return history
 
-    async def channels_history_embeds(self, days=2, limit=10000):
-        """List of embeds with all channel history."""
-        after = dt.datetime.utcnow() - dt.timedelta(days=days)
-        history = await self.channel_history(after=after, limit=limit)
-
+    def get_channel_history_embeds(self, group_by=4, history=None, days=None):
+        """List of embeds"""
         embeds = []
-        for log_groups in grouper(4, history):
+        for log_groups in grouper(group_by, history):
             em = discord.Embed(
                 title=self.guild.name,
                 description="Channel activity in the last {} days.".format(days),
                 color=discord.Color.red()
             )
-            em.set_thumbnail(url=self.guild.icon_url)
+            em.set_footer(text=self.guild.name, icon_url=self.guild.icon_url)
             for item in log_groups:
                 name = "{}: {}".format(self.guild.get_channel(item['channel_id']).name, item['count'])
                 value = ', '.join(['{}: {}'.format(author.display_name, count) for author, count in item['rank']])
+                if len(value) > 1000:
+                    value = value[:1000]
                 em.add_field(name=name, value=value)
             embeds.append(em)
         return embeds
+
+    async def channels_history_embeds(self, days=2, limit=10000):
+        """List of embeds with all channel history."""
+        after = dt.datetime.utcnow() - dt.timedelta(days=days)
+        history = await self.channel_history(after=after, limit=limit)
+
+        return self.get_channel_history_embeds(history=history, days=days)
 
     async def channel_history_embeds(self, channel: discord.TextChannel, limit=10000, days=7, roles=None):
         """List of embeds with one channel history."""
@@ -196,26 +202,7 @@ class GuildLog:
 
         history = sorted(history, key=lambda item: item['count'], reverse=True)
 
-        em = discord.Embed(
-            title=self.guild.name,
-            description="Channel activity in the last {} days.".format(days),
-            color=discord.Color.red()
-        )
-        em.set_thumbnail(url=self.guild.icon_url)
-        embeds = [em]
-        for log_groups in grouper(12, history):
-            em = discord.Embed(
-                title=self.guild.name,
-                color=discord.Color.red()
-            )
-            for item in log_groups:
-                name = "{}: {}".format(self.guild.get_channel(item['channel_id']).name, item['count'])
-                value = ', '.join(['{}: {}'.format(author.display_name, count) for author, count in item['rank']])
-                if len(value) > 1024:
-                    value = value[:1024]
-                em.add_field(name=name, value=value)
-            embeds.append(em)
-        return embeds
+        return self.get_channel_history_embeds(history=history, days=days)
 
 
 class DStats:
