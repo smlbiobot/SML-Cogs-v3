@@ -7,7 +7,6 @@ from discord.ext import commands
 from redbot.core import Config
 from redbot.core import checks
 from redbot.core.bot import Red
-from redbot.core.context import RedContext
 from redbot.core.utils.chat_formatting import box, pagify
 
 BOT_COMMANDER_ROLES = ["Bot Commander", "High-Elder"]
@@ -78,9 +77,10 @@ class MemberManagement:
             help='Macro name. Create using [p]mmset')
         return parser
 
+    @commands.guild_only()
     @commands.command()
     @commands.has_any_role(*BOT_COMMANDER_ROLES)
-    async def mm(self, ctx: RedContext, *args):
+    async def mm(self, ctx, *args):
         """Member management by roles.
 
         !mm [-h] [-x EXCLUDE [EXCLUDE ...]]
@@ -294,8 +294,9 @@ class MemberManagement:
             roles = guild.roles
         return roles
 
-    @commands.command(no_pm=True)
-    async def listroles(self, ctx: RedContext, *roles):
+    @commands.guild_only()
+    @commands.command()
+    async def listroles(self, ctx, *roles):
         """List all the roles on the guild."""
         guild = ctx.message.guild
         if guild is None:
@@ -319,15 +320,16 @@ class MemberManagement:
         for page in pagify("\n".join(out), shorten_by=12):
             await ctx.send(page)
 
-    @commands.command(no_pm=True)
-    async def listrolecolors(self, ctx: RedContext, *roles):
+    @commands.guild_only()
+    @commands.command()
+    async def listrolecolors(self, ctx, *roles):
         """List role colors on the guild."""
         guild = ctx.message.guild
         role_objs = self.get_guild_roles(guild, *roles)
         out = []
         for role in guild.role_hierarchy:
             if role in role_objs:
-                rgb = role.color.to_tuple()
+                rgb = role.color.to_rgb()
                 out.append('**{name}**: {color_rgb}, {color_hex}'.format(
                     name=role.name,
                     color_rgb=rgb,
@@ -336,9 +338,10 @@ class MemberManagement:
         for page in pagify("\n".join(out), shorten_by=12):
             await ctx.send(page)
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
+    @commands.command()
     @checks.mod_or_permissions(manage_roles=True)
-    async def changerole(self, ctx: RedContext, member: discord.Member = None, *roles: str):
+    async def changerole(self, ctx, member: discord.Member = None, *roles: str):
         """Change roles of a user.
 
         Example: !changerole SML +Delta "-Foxtrot Lead" "+Delta Lead"
@@ -413,14 +416,16 @@ class MemberManagement:
                                 "Added {} for {}".format(
                                     role.name, member.display_name))
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
+    @commands.command()
     @checks.mod_or_permissions(manage_roles=True)
-    async def searchmember(self, ctx: RedContext, name=None):
+    async def searchmember(self, ctx, name=None):
         """Search member on guild by name."""
         if name is None:
             await ctx.send_help()
             return
-
+        if name.startswith("<@"):
+            return await ctx.send("Use a plain text name instead of a mention.")
         guild = ctx.message.guild
         results = []
         for member in guild.members:
@@ -436,19 +441,20 @@ class MemberManagement:
         await ctx.send('Found {} members.'.format(len(results)))
 
         for member in results:
+            role_list = (', '.join([r.name for r in member.roles])).replace("@everyone, ", "")
             out = [
                 '---------------------',
-                'Display name: {}'.format(member.display_name),
+                'Display Name: {}'.format(member.display_name),
                 'Username: {}'.format(str(member)),
-                'Roles: {}'.format(', '.join(
-                    [r.name for r in member.roles if not r.is_everyone])),
-                'id: {}'.format(member.id)
+                'Roles: {}'.format(role_list),
+                'User ID: {}'.format(member.id)
             ]
             await ctx.send('\n'.join(out))
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
+    @commands.command()
     @checks.mod_or_permissions(manage_roles=True)
-    async def addrole2role(self, ctx: RedContext, with_role_name, to_add_role_name):
+    async def addrole2role(self, ctx, with_role_name, to_add_role_name):
         """Add a role to users with a specific role."""
         guild = ctx.message.guild
         with_role = discord.utils.get(guild.roles, name=with_role_name)
@@ -469,9 +475,10 @@ class MemberManagement:
                     except:
                         pass
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
+    @commands.command()
     @checks.mod_or_permissions(manage_roles=True)
-    async def multiaddrole(self, ctx: RedContext, role, *members: discord.Member):
+    async def multiaddrole(self, ctx, role, *members: discord.Member):
         """Add a role to multiple users.
 
         !multiaddrole rolename User1 User2 User3
@@ -479,9 +486,10 @@ class MemberManagement:
         for member in members:
             await ctx.invoke(self.changerole, member, role)
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
+    @commands.command()
     @checks.mod_or_permissions(manage_roles=True)
-    async def multiremoverole(self, ctx: RedContext, role, *members: discord.Member):
+    async def multiremoverole(self, ctx, role, *members: discord.Member):
         """Remove a role from multiple users.
 
         !multiremoverole rolename User1 User2 User3
@@ -490,18 +498,19 @@ class MemberManagement:
         for member in members:
             await ctx.invoke(self.changerole, member, role)
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
+    @commands.command()
     @checks.mod_or_permissions(manage_roles=True)
-    async def channelperm(self, ctx: RedContext, member: discord.Member):
+    async def channelperm(self, ctx, member: discord.Member):
         """Return channels viewable by member."""
         author = ctx.message.author
         guild = ctx.message.guild
         if not member:
             member = author
 
-        text_channels = [c for c in guild.channels if c.type == discord.ChannelType.text]
+        text_channels = [c for c in guild.channels if type(c) == discord.channel.TextChannel]
         text_channels = sorted(text_channels, key=lambda c: c.position)
-        voice_channels = [c for c in guild.channels if c.type == discord.ChannelType.voice]
+        voice_channels = [c for c in guild.channels if type(c) == discord.channel.VoiceChannel]
         voice_channels = sorted(voice_channels, key=lambda c: c.position)
 
         out = []
