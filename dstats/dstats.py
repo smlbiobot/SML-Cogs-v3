@@ -45,7 +45,7 @@ def parser(cat):
         nargs='+',
         help='Include roles')
     parser.add_argument(
-        '-t', '--top',
+        '-n', '--top',
         nargs=1,
         help='Top N results',
         type=int,
@@ -62,6 +62,12 @@ def parser(cat):
         help='Limit N messages',
         type=int,
         default=10000
+    )
+    parser.add_argument(
+        '-t', '--text',
+        help='Text match',
+        type=str,
+        default=''
     )
     return parser
 
@@ -150,13 +156,16 @@ class GuildLog:
         history = sorted(history, key=lambda item: item['count'], reverse=True)
         return history
 
-    def get_channel_history_embeds(self, group_by=4, history=None, days=None):
+    def get_channel_history_embeds(self, group_by=4, history=None, days=None, text=None):
         """List of embeds"""
         embeds = []
         for log_groups in grouper(group_by, history):
+            desc = "Channel activity in the last {} days".format(days)
+            if text is not None:
+                desc = ", containing `{}` ".format(text)
             em = discord.Embed(
                 title=self.guild.name,
-                description="Channel activity in the last {} days.".format(days),
+                description=desc,
                 color=discord.Color.red()
             )
             em.set_footer(text=self.guild.name, icon_url=self.guild.icon_url)
@@ -169,14 +178,14 @@ class GuildLog:
             embeds.append(em)
         return embeds
 
-    async def channels_history_embeds(self, days=2, limit=10000):
+    async def channels_history_embeds(self, days=2, limit=10000, text=None):
         """List of embeds with all channel history."""
         after = dt.datetime.utcnow() - dt.timedelta(days=days)
         history = await self.channel_history(after=after, limit=limit)
 
-        return self.get_channel_history_embeds(history=history, days=days)
+        return self.get_channel_history_embeds(history=history, days=days, text=text)
 
-    async def channel_history_embeds(self, channel: discord.TextChannel, limit=10000, days=7, roles=None):
+    async def channel_history_embeds(self, channel: discord.TextChannel, limit=10000, days=7, roles=None, text=None):
         """List of embeds with one channel history."""
         after = dt.datetime.utcnow() - dt.timedelta(days=days)
 
@@ -188,9 +197,15 @@ class GuildLog:
 
         try:
             async for message in channel.history(after=after, limit=limit, reverse=False):
+                add_it = False
                 if getattr(message.author, 'roles', False):
                     if len(roles) == 0 or any([author_role in roles for author_role in message.author.roles]):
-                        authors.append(message.author)
+                        add_it = True
+                        if text is not None and text not in message.content:
+                            add_it = False
+
+                if add_it:
+                    authors.append(message.author)
             if len(authors) > 0:
                 history.append({
                     'channel_id': channel.id,
@@ -202,7 +217,7 @@ class GuildLog:
 
         history = sorted(history, key=lambda item: item['count'], reverse=True)
 
-        return self.get_channel_history_embeds(history=history, days=days)
+        return self.get_channel_history_embeds(history=history, days=days, text=text)
 
 
 class DStats:
@@ -258,8 +273,9 @@ class DStats:
             glog = GuildLog(ctx.guild)
             days = pargs.days
             limit = pargs.limit
+            text = pargs.text
             roles = get_guild_roles(ctx.guild, pargs.roles)
-            embeds = await glog.channel_history_embeds(channel, days=days, limit=limit, roles=roles)
+            embeds = await glog.channel_history_embeds(channel, days=days, limit=limit, roles=roles, text=text)
             for em in embeds:
                 await ctx.send(embed=em)
 
