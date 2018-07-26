@@ -178,7 +178,7 @@ class GuildLog:
             embeds.append(em)
         return embeds
 
-    async def channels_history_embeds(self, days=2, limit=10000, text=None):
+    async def channels_history_embeds(self, days=7, limit=10000, text=None):
         """List of embeds with all channel history."""
         after = dt.datetime.utcnow() - dt.timedelta(days=days)
         history = await self.channel_history(after=after, limit=limit)
