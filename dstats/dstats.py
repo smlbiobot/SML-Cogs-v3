@@ -289,11 +289,9 @@ class DStats:
             limit = pargs.limit
             text = pargs.text
             roles = get_guild_roles(ctx.guild, pargs.roles)
-            print(pargs)
             channels = sorted(ctx.guild.text_channels, key=lambda x: x.position)
 
             for channel in channels:
-                print(days, limit, roles, text)
                 embeds = await glog.channel_history_embeds(channel, days=days, limit=limit, roles=roles, text=text)
                 for em in embeds:
                     await ctx.send(embed=em)
