@@ -37,7 +37,7 @@ def grouper(n, iterable, fillvalue=None):
         for t in itertools.zip_longest(*args))
 
 
-def parser(cat):
+def parser():
     """Argument parser."""
     parser = argparse.ArgumentParser(prog='[p]dstats')
     parser.add_argument(
@@ -46,7 +46,6 @@ def parser(cat):
         help='Include roles')
     parser.add_argument(
         '-n', '--top',
-        nargs=1,
         help='Top N results',
         type=int,
         default=10
@@ -161,8 +160,8 @@ class GuildLog:
         embeds = []
         for log_groups in grouper(group_by, history):
             desc = "Channel activity in the last {} days".format(days)
-            if text is not None:
-                desc = ", containing `{}` ".format(text)
+            if text is not None and len(text) > 0:
+                desc += ", containing `{}` ".format(text)
             em = discord.Embed(
                 title=self.guild.name,
                 description=desc,
@@ -177,13 +176,6 @@ class GuildLog:
                 em.add_field(name=name, value=value)
             embeds.append(em)
         return embeds
-
-    async def channels_history_embeds(self, days=7, limit=10000, text=None):
-        """List of embeds with all channel history."""
-        after = dt.datetime.utcnow() - dt.timedelta(days=days)
-        history = await self.channel_history(after=after, limit=limit)
-
-        return self.get_channel_history_embeds(history=history, days=days, text=text)
 
     async def channel_history_embeds(self, channel: discord.TextChannel, limit=10000, days=7, roles=None, text=None):
         """List of embeds with one channel history."""
@@ -262,7 +254,7 @@ class DStats:
           -d DAYS, --days DAYS      Last N days
           -l LIMIT, --limit LIMIT   Limit N messages
         """
-        p = parser('channel')
+        p = parser()
         try:
             pargs = p.parse_args(args)
         except SystemExit:
@@ -281,10 +273,27 @@ class DStats:
 
     @dstats.command(name="channels")
     @checks.mod_or_permissions()
-    async def dstats_channels(self, ctx: Context):
+    async def dstats_channels(self, ctx: Context, *args):
         """All users stats."""
+
+        p = parser()
+        try:
+            pargs = p.parse_args(args)
+        except SystemExit:
+            await ctx.send_help()
+            return
+
         async with ctx.typing():
             glog = GuildLog(ctx.guild)
-            embeds = await glog.channels_history_embeds()
-            for em in embeds:
-                await ctx.send(embed=em)
+            days = pargs.days
+            limit = pargs.limit
+            text = pargs.text
+            roles = get_guild_roles(ctx.guild, pargs.roles)
+            print(pargs)
+            channels = sorted(ctx.guild.text_channels, key=lambda x: x.position)
+
+            for channel in channels:
+                print(days, limit, roles, text)
+                embeds = await glog.channel_history_embeds(channel, days=days, limit=limit, roles=roles, text=text)
+                for em in embeds:
+                    await ctx.send(embed=em)
