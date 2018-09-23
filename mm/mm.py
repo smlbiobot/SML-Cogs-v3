@@ -3,7 +3,7 @@ import itertools
 from random import choice
 
 import discord
-from discord.ext import commands
+from redbot.core import commands
 from redbot.core import Config
 from redbot.core import checks
 from redbot.core.bot import Red
