@@ -8,11 +8,10 @@ from random import choice
 
 import discord
 import humanize
-from redbot.core import commands
 from redbot.core import Config
 from redbot.core import checks
+from redbot.core import commands
 from redbot.core.bot import Red
-# from redbot.core.context import RedContext
 from redbot.core.commands import Context
 
 logger = logging.getLogger(__name__)
@@ -212,7 +211,7 @@ class GuildLog:
         return self.get_channel_history_embeds(history=history, days=days, text=text)
 
 
-class DStats:
+class DStats(commands.Cog):
     """Discord Statistics"""
 
     def __init__(self, bot: Red):

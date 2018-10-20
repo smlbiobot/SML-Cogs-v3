@@ -3,9 +3,9 @@ import itertools
 from random import choice
 
 import discord
-from redbot.core import commands
 from redbot.core import Config
 from redbot.core import checks
+from redbot.core import commands
 from redbot.core.bot import Red
 from redbot.core.utils.chat_formatting import box, pagify
 
@@ -24,7 +24,7 @@ def grouper(n, iterable, fillvalue=None):
         for t in itertools.zip_longest(*args))
 
 
-class MemberManagement:
+class MemberManagement(commands.Cog):
     """Member Management plugin for Red Discord bot."""
 
     def __init__(self, bot: Red):
