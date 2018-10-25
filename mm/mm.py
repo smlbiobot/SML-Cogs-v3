@@ -312,7 +312,7 @@ class MemberManagement(commands.Cog):
             for role in member.roles:
                 if role in roles_to_list:
                     out_roles[role.id]['count'] += 1
-        for role in guild.role_hierarchy:
+        for role in guild.roles:
             if role in roles_to_list:
                 out.append(
                     "**{}** ({} members)".format(
@@ -327,7 +327,7 @@ class MemberManagement(commands.Cog):
         guild = ctx.message.guild
         role_objs = self.get_guild_roles(guild, *roles)
         out = []
-        for role in guild.role_hierarchy:
+        for role in guild.roles:
             if role in role_objs:
                 rgb = role.color.to_rgb()
                 out.append('**{name}**: {color_rgb}, {color_hex}'.format(
