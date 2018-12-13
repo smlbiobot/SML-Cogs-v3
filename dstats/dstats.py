@@ -128,6 +128,10 @@ class GuildLog:
         else:
             items = history
 
+        # total count
+        total_count = sum([count for channel_id, count in items])
+        em.add_field(name="Total messages", value=total_count)
+
         for channel_id, count in items:
             em.add_field(
                 name=self.guild.get_channel(channel_id).name,
@@ -237,6 +241,38 @@ class DStats(commands.Cog):
             glog = GuildLog(ctx.guild)
             em = await glog.user_history_embed(member, days=days, limit=limit)
             await ctx.send(embed=em)
+
+    @dstats.command(name="role")
+    @checks.mod_or_permissions()
+    async def dstats_role(self, ctx: Context, role: str, limit=10000, days=7):
+        """Users by role."""
+        async with ctx.typing():
+            # search for role
+            _role = None
+            for r in ctx.guild.roles:
+                if r.name.lower() == role.lower():
+                    _role = r
+                    break
+
+            if _role is None:
+                await ctx.send("Cannot find role. Aborted.")
+                return
+
+            # find members with role
+            members = []
+            for m in ctx.guild.members:
+                if _role in m.roles:
+                    members.append(m)
+
+            if len(members) == 0:
+                await ctx.send("Cannot find member with the role. Aborted.")
+                return
+
+            # list user stats
+            for m in members:
+                glog = GuildLog(ctx.guild)
+                em = await glog.user_history_embed(m, days=days, limit=limit)
+                await ctx.send(embed=em)
 
     @dstats.command(name="channel")
     @checks.mod_or_permissions()
