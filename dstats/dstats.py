@@ -214,6 +214,28 @@ class GuildLog:
 
         return self.get_channel_history_embeds(history=history, days=days, text=text)
 
+    async def server_history(self, limit=10000, days=7, roles=None, text=None):
+        after = dt.datetime.utcnow() - dt.timedelta(days=days)
+        authors = dict()
+        channels = dict()
+        try:
+            for channel in self.guild.text_channels:
+                async for message in channel.history(after=after, limit=limit, reverse=False):
+                    author = message.author
+                    if author.id not in authors:
+                        authors[author.id] = 0
+                    authors[author.id] += 1
+
+                    if channel.id not in channels:
+                        channels[channel.id] = 0
+                    channels[channel.id] += 1
+
+        except Exception as e:
+            logger.exception(e)
+
+        return dict(authors=authors, channels=channels)
+
+
 
 class DStats(commands.Cog):
     """Discord Statistics"""
@@ -330,3 +352,24 @@ class DStats(commands.Cog):
                 embeds = await glog.channel_history_embeds(channel, days=days, limit=limit, roles=roles, text=text)
                 for em in embeds:
                     await ctx.send(embed=em)
+
+
+    @dstats.command(name="server")
+    @checks.mod_or_permissions()
+    async def dstats_server(self, ctx:Context, *args):
+        """Server stats by user."""
+        async with ctx.typing():
+            glog = GuildLog(ctx.guild)
+            f = await glog.server_history()
+            o = []
+
+            for channel_id, count in f.get('channels', {}).items():
+                msg = (
+                    "{channel}: {count}".format(
+                       channel=ctx.guild.get_channel(channel_id),
+                        count=count
+                    )
+                )
+                await ctx.send(msg)
+
+
