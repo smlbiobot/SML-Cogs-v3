@@ -256,7 +256,7 @@ class GuildLog:
                 count=count
             ))
 
-        items = sorted(items, key=lambda x: x.get('count', 0))
+        items = sorted(items, key=lambda x: x.get('count', 0), reverse=True)
 
         for index, item in enumerate(items):
             item['rank'] = index + 1
