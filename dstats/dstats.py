@@ -294,6 +294,39 @@ class DStats(commands.Cog):
             em = await glog.user_history_embed(member, days=days, limit=limit)
             await ctx.send(embed=em)
 
+    @dstats.command(name="userwords")
+    @checks.mod_or_permissions()
+    async def dstats_user_words(self, ctx: Context, member: discord.Member, limit=10000, days=7):
+        """Count word usage."""
+        guild = ctx.guild
+        async with ctx.typing():
+            after = dt.datetime.utcnow() - dt.timedelta(days=days)
+            texts = []
+            for channel in guild.text_channels:
+                try:
+                    async for message in channel.history(after=after, limit=limit, reverse=False):
+                        if message.author == member:
+                            texts += message.content.split(' ')
+                except Exception as e:
+                    logger.exception(e)
+
+            mc = Counter(texts).most_common(100)
+
+            em = discord.Embed(
+                title=guild.name,
+                description="Words used by {}".format(member.display_name),
+                color=discord.Color.red()
+            )
+            em.set_footer(text=guild.name, icon_url=guild.icon_url)
+
+            name = "Word: Count"
+            value = ", ".join(["{}:{}".format(word, count) for word, count in mc])
+            if len(value) > 1000:
+                value = value[:1000]
+
+            em.add_field(name=name, value=value)
+            await ctx.send(embed=em)
+
     @dstats.command(name="role")
     @checks.mod_or_permissions()
     async def dstats_role(self, ctx: Context, role: str, limit=10000, days=7):
