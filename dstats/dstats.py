@@ -241,6 +241,9 @@ class GuildLog:
         try:
             for channel in self.guild.text_channels:
                 async for message in channel.history(after=after, limit=limit, reverse=False):
+                    if text is not None:
+                        if text.lower() not in message.content.lower():
+                            continue
                     author = message.author
                     if author.id not in authors:
                         authors[author.id] = 0
