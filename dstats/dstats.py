@@ -235,6 +235,33 @@ class GuildLog:
 
         return dict(authors=authors, channels=channels)
 
+    async def users_history(self, limit=10000, days=7, roles=None, text=None):
+        after = dt.datetime.utcnow() - dt.timedelta(days=days)
+        authors = dict()
+        try:
+            for channel in self.guild.text_channels:
+                async for message in channel.history(after=after, limit=limit, reverse=False):
+                    author = message.author
+                    if author.id not in authors:
+                        authors[author.id] = 0
+                    authors[author.id] += 1
+
+        except Exception as e:
+            logger.exception(e)
+
+        items = []
+        for author_id, count in authors.items():
+            items.append(dict(
+                author_id=author_id,
+                count=count
+            ))
+
+        items = sorted(items, key=lambda x: x.get('count', 0))
+
+        for index, item in enumerate(items):
+            item['rank'] = index + 1
+
+        return items
 
 
 class DStats(commands.Cog):
@@ -353,10 +380,9 @@ class DStats(commands.Cog):
                 for em in embeds:
                     await ctx.send(embed=em)
 
-
     @dstats.command(name="server")
     @checks.mod_or_permissions()
-    async def dstats_server(self, ctx:Context, *args):
+    async def dstats_server(self, ctx: Context, *args):
         """Server stats by user."""
         async with ctx.typing():
             glog = GuildLog(ctx.guild)
@@ -366,10 +392,55 @@ class DStats(commands.Cog):
             for channel_id, count in f.get('channels', {}).items():
                 msg = (
                     "{channel}: {count}".format(
-                       channel=ctx.guild.get_channel(channel_id),
+                        channel=ctx.guild.get_channel(channel_id),
                         count=count
                     )
                 )
                 await ctx.send(msg)
 
+    @dstats.command(name="users")
+    @checks.mod_or_permissions()
+    async def dstats_server(self, ctx: Context, *args):
+        """Server stats by user."""
+        p = parser()
+        try:
+            pargs = p.parse_args(args)
+        except SystemExit:
+            await ctx.send_help()
+            return
 
+        guild = ctx.guild
+
+        async with ctx.typing():
+            glog = GuildLog(guild)
+            days = pargs.days
+            text = pargs.text
+            items = await glog.users_history(days=days, text=text)
+
+            desc = "User activity in the last {} days".format(days)
+            if text is not None and len(text) > 0:
+                desc += ", containing `{}` ".format(text)
+            em = discord.Embed(
+                title=guild.name,
+                description=desc,
+                color=discord.Color.red()
+            )
+            em.set_footer(text=guild.name, icon_url=guild.icon_url)
+            name = "User: Message Count"
+            values = []
+            for item in items[:100]:
+                author = guild.get_member(item['author_id'])
+                count = item['count']
+                if author:
+                    author_name = author.display_name
+                else:
+                    author_name = item['author_id']
+
+                values.append('{}: {}'.format(author_name, count))
+
+            value = ", ".join(values)
+            if len(value) > 1000:
+                value = value[:1000]
+
+            em.add_field(name=name, value=value)
+            await ctx.send(embed=em)
