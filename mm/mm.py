@@ -29,6 +29,7 @@ class MemberManagement(commands.Cog):
 
     def __init__(self, bot: Red):
         """Init."""
+        super().__init__()
         self.bot = bot
         self.config = Config.get_conf(self, identifier=209287691722817536, force_registration=True)
         default_global = {}

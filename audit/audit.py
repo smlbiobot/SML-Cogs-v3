@@ -32,6 +32,7 @@ class Audit:
 
     def __init__(self, bot: Red):
         """Init."""
+        super().__init__()
         self.bot = bot
 
     @commands.guild_only()
