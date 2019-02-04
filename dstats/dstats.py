@@ -280,10 +280,10 @@ class DStats(commands.Cog):
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
 
-    @commands.group()
+    @commands.group(autohelp=False)
     async def dstats(self, ctx: Context):
         """Discord stats."""
-        if ctx.invoked_subcommand is None:
+        if not ctx.invoked_subcommand:
             await ctx.send_help()
 
     @dstats.command(name="user")
@@ -437,7 +437,7 @@ class DStats(commands.Cog):
 
     @dstats.command(name="users")
     @checks.mod_or_permissions()
-    async def dstats_server(self, ctx: Context, *args):
+    async def dstats_users(self, ctx: Context, *args):
         """Server stats by user."""
         p = parser()
         try:
