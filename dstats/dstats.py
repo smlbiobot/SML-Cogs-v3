@@ -191,7 +191,7 @@ class GuildLog:
             roles = []
 
         try:
-            async for message in channel.history(after=after, limit=limit, reverse=False):
+            async for message in channel.history(after=after, limit=limit):
                 add_it = False
                 if getattr(message.author, 'roles', False):
                     if len(roles) == 0 or any([author_role in roles for author_role in message.author.roles]):
@@ -437,7 +437,7 @@ class DStats(commands.Cog):
 
     @dstats.command(name="users")
     @checks.mod_or_permissions()
-    async def dstats_server(self, ctx: Context, *args):
+    async def dstats_users(self, ctx: Context, *args):
         """Server stats by user."""
         p = parser()
         try:
