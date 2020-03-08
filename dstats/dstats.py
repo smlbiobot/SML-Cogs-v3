@@ -2,6 +2,7 @@ import argparse
 import datetime as dt
 import itertools
 import logging
+import re
 from collections import Counter
 from collections import OrderedDict
 from random import choice
@@ -15,6 +16,7 @@ from redbot.core.bot import Red
 from redbot.core.commands import Context
 
 from .stopwords import stop_words
+from .utils import get_emoji
 
 logger = logging.getLogger(__name__)
 
@@ -328,8 +330,15 @@ class DStats(commands.Cog):
             )
             em.set_footer(text=guild.name, icon_url=guild.icon_url)
 
+            out = []
+            for word, count in mc:
+                m = re.match('^\:([a-zA-Z\_]+)\:$', word)
+                if m:
+                    word = get_emoji(self.bot, m.group(1))
+                out.append((word, count))
+
             name = "Word: Count"
-            value = ", ".join(["{}:{}".format(word, count) for word, count in mc])
+            value = " - ".join(["{} {}".format(word, count) for word, count in out])
             if len(value) > 1000:
                 value = value[:1000]
 
