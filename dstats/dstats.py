@@ -306,6 +306,99 @@ class DStats(commands.Cog):
             em = await glog.user_history_embed(member, days=days, limit=limit)
             await ctx.send(embed=em)
 
+    @dstats.command(name="mentions")
+    @checks.mod_or_permissions()
+    async def dstats_mentions(self, ctx: Context, limit=10000):
+        """Count mentions by users"""
+        guild = ctx.guild
+        mentioned = dict()
+        ch = ctx.message.channel
+
+        async with ctx.typing():
+            for channel in guild.text_channels:
+                # soon will add flag allowing all vs current
+                if ch.id != channel.id:
+                    continue
+                try:
+                    async for message in channel.history(limit=limit, oldest_first=False):
+                        if not message.mentions:
+                            continue
+
+                        for member in message.mentions:
+                            if member.id not in mentioned.keys():
+                                mentioned[member.id] = dict(
+                                    member=member,
+                                    count=0
+                                )
+                            mentioned[member.id]["count"] += 1
+                except Exception as e:
+                    logger.exception(e)
+
+        mentioned = list(mentioned.values())
+        mentioned.sort(key=lambda x: x.get('count', 0), reverse=True)
+
+        em = discord.Embed(
+            title=guild.name,
+            description=f"Most mentioned members in {ch.mention}",
+            color=discord.Color.red()
+        )
+        em.set_footer(text=guild.name, icon_url=guild.icon_url)
+
+        value = " - ".join([f"{m['member']} {m['count']}" for m in mentioned])
+        if len(value) > 1000:
+            value = value[:1000]
+
+        em.add_field(name="Result", value=value)
+        await ctx.send(embed=em)
+
+    @dstats.command(name="mentioning")
+    @checks.mod_or_permissions()
+    async def dstats_mentioning(self, ctx: Context, limit=10000, days=7):
+        """Count users that mention people the most."""
+        guild = ctx.guild
+        members = dict()
+        ch = ctx.message.channel
+
+        async with ctx.typing():
+            for channel in guild.text_channels:
+                # soon will add flag allowing all vs current
+                if ch.id != channel.id:
+                    continue
+                try:
+                    after = dt.datetime.utcnow() - dt.timedelta(days=days)
+                    async for message in channel.history(limit=limit, after=after):
+                        if not message.mentions:
+                            continue
+
+                        author = message.author
+
+                        if author.id not in members.keys():
+                            members[author.id] = dict(
+                                member=author,
+                                count=0
+                            )
+                        members[author.id]["count"] += 1
+
+                except Exception as e:
+                    logger.exception(e)
+
+        mentioned = list(members.values())
+        mentioned.sort(key=lambda x: x.get('count', 0), reverse=True)
+
+        em = discord.Embed(
+            title=guild.name,
+            description=f"Members who mention others the most in {ch.mention} in last {days} days",
+            color=discord.Color.red()
+        )
+        em.set_footer(text=guild.name, icon_url=guild.icon_url)
+
+        value = " - ".join([f"{m['member']} {m['count']}" for m in mentioned])
+        if len(value) > 1000:
+            value = value[:1000]
+
+        em.add_field(name="Result", value=value)
+        await ctx.send(embed=em)
+
     @dstats.command(name="userwords")
     @checks.mod_or_permissions()
     async def dstats_user_words(self, ctx: Context, member: discord.Member, limit=10000, days=7):
