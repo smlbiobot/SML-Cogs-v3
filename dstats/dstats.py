@@ -14,6 +14,8 @@ from redbot.core import commands
 from redbot.core.bot import Red
 from redbot.core.commands import Context
 
+from .stopwords import stop_words
+
 logger = logging.getLogger(__name__)
 
 
@@ -93,7 +95,7 @@ class GuildLog:
         history = OrderedDict()
         for channel in guild.text_channels:
             try:
-                async for message in channel.history(after=after, limit=limit, reverse=False):
+                async for message in channel.history(after=after, limit=limit, oldest_first=False):
                     if message.author == member:
                         if channel.id not in history:
                             history[channel.id] = 0
@@ -145,7 +147,7 @@ class GuildLog:
         for channel in self.guild.text_channels:
             authors = []
             try:
-                async for message in channel.history(after=after, limit=limit, reverse=False):
+                async for message in channel.history(after=after, limit=limit, oldest_first=False):
                     authors.append(message.author)
                 if len(authors) > 0:
                     history.append({
@@ -193,14 +195,21 @@ class GuildLog:
         try:
             async for message in channel.history(after=after, limit=limit):
                 add_it = False
-                if getattr(message.author, 'roles', False):
-                    if len(roles) == 0 or any([author_role in roles for author_role in message.author.roles]):
-                        add_it = True
-                        if text is not None and text not in message.content:
-                            add_it = False
+                if text is not None and text not in message.content:
+                    # add_it = False
+                    continue
 
-                if add_it:
-                    authors.append(message.author)
+                if not getattr(message.author, 'roles', False):
+                    continue
+
+                if len(roles) == 0 or any([author_role in roles for author_role in message.author.roles]):
+                    add_it = True
+
+                if not add_it:
+                    continue
+
+                authors.append(message.author)
+
             if len(authors) > 0:
                 history.append({
                     'channel_id': channel.id,
@@ -220,7 +229,7 @@ class GuildLog:
         channels = dict()
         try:
             for channel in self.guild.text_channels:
-                async for message in channel.history(after=after, limit=limit, reverse=False):
+                async for message in channel.history(after=after, limit=limit, oldest_first=False):
                     author = message.author
                     if author.id not in authors:
                         authors[author.id] = 0
@@ -240,7 +249,7 @@ class GuildLog:
         authors = dict()
         try:
             for channel in self.guild.text_channels:
-                async for message in channel.history(after=after, limit=limit, reverse=False):
+                async for message in channel.history(after=after, limit=limit, oldest_first=False):
                     if text is not None:
                         if text.lower() not in message.content.lower():
                             continue
@@ -298,18 +307,17 @@ class DStats(commands.Cog):
     @dstats.command(name="userwords")
     @checks.mod_or_permissions()
     async def dstats_user_words(self, ctx: Context, member: discord.Member, limit=10000, days=7):
-        """Count word usage."""
+        """Count word usage in channel"""
         guild = ctx.guild
+        channel = ctx.channel
         async with ctx.typing():
-            after = dt.datetime.utcnow() - dt.timedelta(days=days)
             texts = []
-            for channel in guild.text_channels:
-                try:
-                    async for message in channel.history(after=after, limit=limit, reverse=False):
-                        if message.author == member:
-                            texts += message.content.split(' ')
-                except Exception as e:
-                    logger.exception(e)
+            try:
+                async for message in channel.history(limit=limit, oldest_first=False):
+                    if message.author == member:
+                        texts += [word.lower() for word in message.content.split(' ') if word not in stop_words]
+            except Exception as e:
+                logger.exception(e)
 
             mc = Counter(texts).most_common(100)
 
