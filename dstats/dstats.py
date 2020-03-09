@@ -162,11 +162,12 @@ class GuildLog:
         history = sorted(history, key=lambda item: item['count'], reverse=True)
         return history
 
-    def get_channel_history_embeds(self, group_by=4, history=None, days=None, text=None):
+    def get_channel_history_embeds(self, group_by=4, history=None, days=None, text=None, author_count=0,
+                                   message_count=0, author_char_count_list=None, enable_char_count=False):
         """List of embeds"""
         embeds = []
         for log_groups in grouper(group_by, history):
-            desc = "Channel activity in the last {} days".format(days)
+            desc = f"Channel activity for in the last {days} day(s)"
             if text is not None and len(text) > 0:
                 desc += ", containing `{}` ".format(text)
             em = discord.Embed(
@@ -174,22 +175,45 @@ class GuildLog:
                 description=desc,
                 color=discord.Color.red()
             )
+            em.add_field(name="Author count", value=f"{author_count}")
+            em.add_field(name="Message count", value=f"{message_count}")
             em.set_footer(text=self.guild.name, icon_url=self.guild.icon_url)
             for item in log_groups:
                 name = "{}: {}".format(self.guild.get_channel(item['channel_id']).name, item['count'])
-                value = ', '.join(['{}: {}'.format(author.display_name, count) for author, count in item['rank']])
+                value = ' - '.join(['{} {}'.format(author.display_name, count) for author, count in item['rank']])
                 if len(value) > 1000:
                     value = value[:1000]
-                em.add_field(name=name, value=value)
+                em.add_field(name=name, value=value, inline=False)
             embeds.append(em)
+
+            # add author by author_char_count
+            if enable_char_count:
+                if author_char_count_list:
+                    value = ' - '.join([f"{item['name']} {item['count']}" for item in author_char_count_list])
+                    if len(value) > 1000:
+                        value = value[:1000]
+                    em.add_field(name="Character count", value=value, inline=False)
+
         return embeds
 
-    async def channel_history_embeds(self, channel: discord.TextChannel, limit=10000, days=7, roles=None, text=None):
+    async def channel_history_embeds(
+            self,
+            channel: discord.TextChannel,
+            limit=10000,
+            days=7,
+            roles=None,
+            text=None,
+            enable_char_count=False,
+    ):
         """List of embeds with one channel history."""
         after = dt.datetime.utcnow() - dt.timedelta(days=days)
 
         history = []
         authors = []
+        author_ids = set()
+        message_count = 0
+        character_count = 0
+        author_char_count = dict()
 
         if roles is None:
             roles = []
@@ -201,8 +225,8 @@ class GuildLog:
                     # add_it = False
                     continue
 
-                if not getattr(message.author, 'roles', False):
-                    continue
+                # if not getattr(message.author, 'roles', False):
+                #     continue
 
                 if len(roles) == 0 or any([author_role in roles for author_role in message.author.roles]):
                     add_it = True
@@ -211,19 +235,52 @@ class GuildLog:
                     continue
 
                 authors.append(message.author)
+                author_ids.add(message.author.id)
+                message_count += 1
+
+                if enable_char_count:
+                    character_count = len(message.content)
+                    if message.author.id not in author_char_count:
+                        author_char_count[message.author.id] = 0
+                    author_char_count[message.author.id] += character_count
 
             if len(authors) > 0:
                 history.append({
                     'channel_id': channel.id,
                     'rank': Counter(authors).most_common(),
-                    'count': len(authors)
+                    'count': len(authors),
                 })
         except Exception as e:
             logger.exception(e)
 
         history = sorted(history, key=lambda item: item['count'], reverse=True)
 
-        return self.get_channel_history_embeds(history=history, days=days, text=text)
+        author_char_count_list = []
+        for k, v in author_char_count.items():
+            uid = k
+            member = channel.guild.get_member(k)
+            if member:
+                name = member.display_name
+            else:
+                name = uid
+            count = v
+            author_char_count_list.append(dict(
+                id=uid,
+                name=name,
+                count=count
+            ))
+
+        author_char_count_list.sort(key=lambda item: item['count'], reverse=True)
+
+        return self.get_channel_history_embeds(
+            history=history,
+            days=days,
+            text=text,
+            author_count=len(author_ids),
+            message_count=message_count,
+            author_char_count_list=author_char_count_list,
+            enable_char_count=enable_char_count,
+        )
 
     async def server_history(self, limit=10000, days=7, roles=None, text=None):
         after = dt.datetime.utcnow() - dt.timedelta(days=days)
@@ -425,7 +482,7 @@ class DStats(commands.Cog):
 
             out = []
             for word, count in mc:
-                m = re.match('^\:([a-zA-Z\_]+)\:$', word)
+                m = re.match('^:([a-zA-Z\_]+):$', word)
                 if m:
                     word = get_emoji(self.bot, m.group(1))
                 out.append((word, count))
@@ -496,9 +553,46 @@ class DStats(commands.Cog):
             glog = GuildLog(ctx.guild)
             days = pargs.days
             limit = pargs.limit
+            if limit == 0:
+                limit = None
             text = pargs.text
             roles = get_guild_roles(ctx.guild, pargs.roles)
             embeds = await glog.channel_history_embeds(channel, days=days, limit=limit, roles=roles, text=text)
+            for em in embeds:
+                await ctx.send(embed=em)
+
+    @dstats.command(name="channel_char_count")
+    @checks.mod_or_permissions()
+    async def dstats_channel_char_count(self, ctx: Context, channel: discord.TextChannel, *args):
+        """Channel stats by character count.
+        usage: [p]dstats [-h] [-r ROLES [ROLES ...]] [-t TOP] [-d DAYS] [-l LIMIT]
+
+        optional arguments:
+          -h, --help            show this help message and exit
+          -r ROLES [ROLES ...], --roles ROLES [ROLES ...]
+                                    Include roles
+          -t TOP, --top TOP         Top N results
+          -d DAYS, --days DAYS      Last N days
+          -l LIMIT, --limit LIMIT   Limit N messages
+        """
+        p = parser()
+        try:
+            pargs = p.parse_args(args)
+        except SystemExit:
+            await ctx.send_help()
+            return
+
+        async with ctx.typing():
+            glog = GuildLog(ctx.guild)
+            days = pargs.days
+            limit = pargs.limit
+            if limit == 0:
+                limit = None
+            text = pargs.text
+            roles = get_guild_roles(ctx.guild, pargs.roles)
+            embeds = await glog.channel_history_embeds(
+                channel, days=days, limit=limit, roles=roles, text=text, enable_char_count=True
+            )
             for em in embeds:
                 await ctx.send(embed=em)
 
