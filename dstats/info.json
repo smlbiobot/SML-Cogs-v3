@@ -1,10 +1,9 @@
 {
-    "AUTHOR": "SML",
-    "SHORT": "Discord Statistics",
-    "DESCRIPTION": "Discord statistics on users, roles, channels, etc.",
-    "DISABLED": false,
-    "NAME": "DStats",
-    "REQUIREMENTS": ["humanize"],
-    "TAGS": ["stats", "statsitics", "activity"],
-    "INSTALL_MSG": "Thanks for installing. If you need help, please create new issue on my Github repo: <http://github.com/smlbiobot/SML-Cogs> or my Discord server: <http://discord.me/sml>"
+    "author": "SML",
+    "short": "Discord Statistics",
+    "description": "Discord statistics on users, roles, channels, etc.",
+    "disabled": false,
+    "requirements": ["humanize"],
+    "tags": ["stats", "statsitics", "activity"],
+    "install_msg": "Thanks for installing. If you need help, please create new issue on my Github repo: <http://github.com/smlbiobot/SML-Cogs> or my Discord server: <http://discord.me/sml>"
 }
