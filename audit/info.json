@@ -1,9 +1,9 @@
 {
     "author": ["SML"],
-    "short": "Member Management",
-    "description": "Member management utility for displaying members using multiple role inclusions and exclusions.",
+    "short": "Audit",
+    "description": "Show server audit logs",
     "disabled": false,
     "requirements": [],
-    "tags": ["role", "member", "management", "utility", "util"],
+    "tags": ["audit"],
     "install_msg": "Thanks for installing. If you need help, please create new issue on my Github repo: https://github.com/smlbiobot/SML-Cogs-v3 or my Discord server: https://discord.smluniverse.com"
 }

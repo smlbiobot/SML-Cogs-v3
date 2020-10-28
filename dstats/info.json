@@ -1,9 +1,9 @@
 {
-    "author": "SML",
+    "author": ["SML"],
     "short": "Discord Statistics",
     "description": "Discord statistics on users, roles, channels, etc.",
     "disabled": false,
     "requirements": ["humanize"],
     "tags": ["stats", "statsitics", "activity"],
-    "install_msg": "Thanks for installing. If you need help, please create new issue on my Github repo: <http://github.com/smlbiobot/SML-Cogs> or my Discord server: <http://discord.me/sml>"
+    "install_msg": "Thanks for installing. If you need help, please create new issue on my Github repo: https://github.com/smlbiobot/SML-Cogs-v3 or my Discord server: https://discord.smluniverse.com"
 }
