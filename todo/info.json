@@ -1,0 +1,9 @@
+{
+    "author": ["SML"],
+    "short": "ToDo",
+    "description": "Add todo items in specific channel as reminders for the entire team.",
+    "disabled": false,
+    "requirements": [],
+    "tags": ["todo"],
+    "install_msg": "Thanks for installing. If you need help, please create new issue on my Github repo: https://github.com/smlbiobot/SML-Cogs-v3 or my Discord server: https://discord.smluniverse.com"
+}
