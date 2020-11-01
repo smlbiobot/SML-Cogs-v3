@@ -1,7 +1,7 @@
 {
     "author": ["SML"],
-    "short": "ToDo",
-    "description": "Add todo items in specific channel as reminders for the entire team.",
+    "short": "Message Quote",
+    "description": "Quote a message from a channel or server.",
     "disabled": false,
     "requirements": [],
     "tags": ["todo"],
