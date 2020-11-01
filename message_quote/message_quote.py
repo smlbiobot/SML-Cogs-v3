@@ -83,6 +83,12 @@ class MessageQuote(commands.Cog):
             )
 
             em.add_field(
+                name="Channel",
+                value=msg.channel.mention,
+                inline=False
+            )
+
+            em.add_field(
                 name="Posted",
                 value=msg.created_at.isoformat(sep=" "),
                 inline=False
