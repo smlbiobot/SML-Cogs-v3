@@ -60,7 +60,7 @@ class Todo(commands.Cog):
             title=message,
             color=discord.Color.blue()
         )
-        message = await channel.send(channel, embed=em)
+        message = await channel.send(embed=em)
         await message.add_reaction("✅")
         await message.add_reaction("❌")
         await message.add_reaction("🦋")
