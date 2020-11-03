@@ -118,12 +118,16 @@ class GuildLog:
             color=member.color
         )
         em.set_thumbnail(url=member.avatar_url)
-        em.add_field(
-            name="Last seen",
-            value="{}\n{}".format(
+
+        value = "None"
+        if last_seen:
+            value = "{}\n{}".format(
                 last_seen.strftime('%a, %b %d, %Y, %H:%M:%S UTC'),
                 humanize.naturaltime(dt.datetime.utcnow() - last_seen)
-            ),
+            )
+        em.add_field(
+            name="Last seen",
+            value=value,
             inline=False
         )
 
@@ -351,8 +355,7 @@ class DStats(commands.Cog):
     @commands.group()
     async def dstats(self, ctx: Context):
         """Discord stats."""
-        if ctx.invoked_subcommand is None:
-            await ctx.send_help()
+        pass
 
     @dstats.command(name="user")
     @checks.mod_or_permissions()
@@ -482,7 +485,7 @@ class DStats(commands.Cog):
 
             out = []
             for word, count in mc:
-                m = re.match('^:([a-zA-Z\_]+):$', word)
+                m = re.match(r'^:([a-zA-Z\_]+):$', word)
                 if m:
                     word = get_emoji(self.bot, m.group(1))
                 out.append((word, count))
