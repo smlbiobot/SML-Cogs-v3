@@ -106,4 +106,4 @@ class MessageQuote(commands.Cog):
                 icon_url=msg.guild.icon_url
             )
 
-            await ctx.send(ctx.message.channel, embed=em)
+            await ctx.send(embed=em)
