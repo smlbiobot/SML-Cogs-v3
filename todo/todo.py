@@ -56,6 +56,10 @@ class Todo(commands.Cog):
         channel_id = await self.config.guild(ctx.guild).task_channel_id()
         channel = self.bot.get_channel(channel_id)
 
+        if not channel:
+            await ctx.send("Channel is not set, or doees not exist")
+            return
+
         em = discord.Embed(
             title=message,
             color=discord.Color.blue()
