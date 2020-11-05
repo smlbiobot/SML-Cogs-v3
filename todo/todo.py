@@ -74,8 +74,16 @@ class Todo(commands.Cog):
         if message.author.id != self.bot.user.id:
             return
 
+        # message is not in a channel (e.g. dm)
+        if not message.channel:
+            return
+
         # message is not in task channel
-        if message.channel.id != await self.config.guild(reaction.message.guild).task_channel_id():
+        guild = reaction.message.guild
+        if not guild:
+            return
+
+        if message.channel.id != await self.config.guild(guild).task_channel_id():
             return
 
         # user is bot
