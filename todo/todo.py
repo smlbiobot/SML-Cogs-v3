@@ -57,7 +57,7 @@ class Todo(commands.Cog):
         channel = self.bot.get_channel(channel_id)
 
         if not channel:
-            await ctx.send("Channel is not set, or doees not exist")
+            await ctx.send("Channel is not set, or does not exist")
             return
 
         em = discord.Embed(
