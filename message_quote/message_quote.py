@@ -11,6 +11,7 @@ UNIQUE_ID = 202011012214
 
 class MessageQuote(commands.Cog):
     def __init__(self, bot: Red):
+        super().__init__()
         self.bot = bot
         self.config = Config.get_conf(self, identifier=UNIQUE_ID, force_registration=True)
 
@@ -47,13 +48,13 @@ class MessageQuote(commands.Cog):
             try:
                 msg = await channel.fetch_message(message_id)
             except discord.NotFound:
-                await self.bot.say("Message not found.")
+                await ctx.send("Message not found.")
                 return
             except discord.Forbidden:
-                await self.bot.say("I do not have permissions to fetch the message")
+                await ctx.send("I do not have permissions to fetch the message")
                 return
             except discord.HTTPException:
-                await self.bot.say("Retrieving message failed")
+                await ctx.send("Retrieving message failed")
                 return
 
             if not msg:
