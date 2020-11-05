@@ -1,3 +1,5 @@
+import datetime as dt
+
 import discord
 from discord import TextChannel
 from redbot.core import commands
@@ -50,8 +52,6 @@ class Todo(commands.Cog):
     async def todo(self, ctx, *, message):
         """
         Add a todo item
-        :param message:
-        :return:
         """
         channel_id = await self.config.guild(ctx.guild).task_channel_id()
         channel = self.bot.get_channel(channel_id)
@@ -66,50 +66,69 @@ class Todo(commands.Cog):
         await message.add_reaction("🦋")
 
     @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
 
-        message = reaction.message
-
-        # message is not self
-        if message.author.id != self.bot.user.id:
+        if payload.event_type != 'REACTION_ADD':
             return
 
-        # message is not in a channel (e.g. dm)
-        if not message.channel:
+        # message has no channel
+        channel = self.bot.get_channel(payload.channel_id)
+        if not channel:
             return
 
-        # message is not in task channel
-        guild = reaction.message.guild
+        # invalid message
+        message = await channel.fetch_message(payload.message_id)
+        if not message:
+            return
+
+        # message not in a guild
+        guild = message.guild
         if not guild:
             return
 
+        # message is not in task channel
         if message.channel.id != await self.config.guild(guild).task_channel_id():
             return
 
-        # user is bot
-        if user.bot:
+        # message author is not self
+        if message.author.id != self.bot.user.id:
             return
 
+        # added by bot
+        if payload.user_id == self.bot.user.id:
+            return
+
+        str_emoji = str(payload.emoji)
+
         # invalid emojis
-        if reaction.emoji not in ["✅", "❌", "🦋"]:
+        if str_emoji not in ["✅", "❌", "🦋"]:
             return
 
         em = message.embeds[0]
         new_embed = em.copy()
-        if reaction.emoji == '✅':
-            new_embed.color = discord.Color.green()
-        elif reaction.emoji == '❌':
-            new_embed.color = discord.Color.red()
-        elif reaction.emoji == '🦋':
-            new_embed.color = discord.Color.blue()
 
-        await message.edit(embed=new_embed)
+        color = None
+        if str_emoji == '✅':
+            color = discord.Color.green()
+        elif str_emoji == '❌':
+            color = discord.Color.red()
+        elif str_emoji == '🦋':
+            color = discord.Color.blue()
+
+        # edit embed
+        # new_embed.color = color
+        # await message.edit(embed=new_embed)
+
+        # delete it
+        await message.delete()
 
         # add status update to channel so it will have new message
         em = discord.Embed(
-            title=f'{reaction.emoji} {new_embed.title}',
-            color=new_embed.color
+            title=f'{str_emoji} {new_embed.title}',
+            color=color,
+            timestamp=dt.datetime.utcnow()
         )
-        await reaction.message.channel.send(
-            embed=em
+
+        await channel.send(
+            embed=em,
         )
