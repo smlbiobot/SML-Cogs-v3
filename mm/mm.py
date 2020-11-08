@@ -230,7 +230,7 @@ class MemberManagement(commands.Cog):
 
             # Display a copy-and-pastable list of ids
             if option_output_id:
-                id_list = [m.id for m in out_members]
+                id_list = [str(m.id) for m in out_members]
                 await ctx.send(
                     "Copy and paste these in message to mention users listed:")
                 out = ' '.join(id_list)
