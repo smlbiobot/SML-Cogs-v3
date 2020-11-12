@@ -11,8 +11,8 @@ from redbot.core import commands
 from redbot.core import Config
 from redbot.core.bot import Red
 from redbot.core.commands import Context
-from redbot.core.utils.predicates import ReactionPredicate
 from redbot.core.utils.menus import start_adding_reactions
+from redbot.core.utils.predicates import ReactionPredicate
 
 UNIQUE_ID = 202011120640
 
@@ -36,17 +36,32 @@ class MentionWarn(commands.Cog):
         default_global = {}
         self.config.register_global(**default_global)
         default_guild = {
-            "warn_settings": {}
+            "warn_settings": {},
+            "enabled": False,
         }
         self.config.register_guild(**default_guild)
 
     @commands.group()
     @checks.mod_or_permissions()
-    async def mentionwarnset(self, ctx):
+    async def mentionwarn(self, ctx):
         """Mention Warn Settings"""
         pass
 
-    @mentionwarnset.command(name="clear")
+    @checks.mod_or_permissions()
+    @mentionwarn.command(name="toggle")
+    async def toggle_settings(self, ctx: Context):
+        """Toggle on/off for this server."""
+        enabled = await self.config.guild(ctx.guild).enabled()
+        enabled = not enabled
+        await self.config.guild(ctx.guild).enabled.set(enabled)
+
+        if enabled:
+            await ctx.send("Warnings enabled")
+        else:
+            await ctx.send("Warnings disabled")
+
+    @checks.mod_or_permissions()
+    @mentionwarn.command(name="clear")
     async def clear_all_settings(self, ctx: Context):
         """Clear all settings for server."""
         msg = await ctx.send("Are you sure that you want to clear all the settings for this server?")
@@ -58,11 +73,14 @@ class MentionWarn(commands.Cog):
             return
 
         async with self.config.guild(ctx.guild).warn_settings() as settings:
-            if settings:
+            if len(settings.keys()) > 0:
                 await settings.clear()
-            await ctx.send("Settings cleared")
+                await ctx.send("Settings cleared")
+            else:
+                await ctx.send("No settings found (already cleared).")
 
-    @mentionwarnset.command(name="list")
+    @checks.mod_or_permissions()
+    @mentionwarn.command(name="list")
     async def list_settings(self, ctx: Context):
         """List all settings."""
         em = Embed(
@@ -82,7 +100,23 @@ class MentionWarn(commands.Cog):
                 )
         await ctx.send(embed=em)
 
-    @mentionwarnset.command(name="add")
+    def settings_embed(self, ctx: Context, ws: WarnSetting, title=None) -> Embed:
+        em = Embed(
+            title=title or "Warn Setting"
+        )
+
+        user = discord.utils.get(ctx.guild.members, id=ws.user_id)
+        em.add_field(name="User", value=str(user))
+        em.add_field(name="Message", value=ws.message)
+        roles = "None"
+        if ws.except_role_ids:
+            except_roles = [discord.utils.get(ctx.guild.roles, id=r_id) for r_id in ws.except_role_ids]
+            roles = " ".join([f"{r.mention}" for r in except_roles])
+        em.add_field(name="Except Roles", value=roles)
+        return em
+
+    @checks.mod_or_permissions()
+    @mentionwarn.command(name="add")
     async def add_settings(self, ctx: Context, user: Member, message: str, *except_role_names):
         """Add a warning setting except a role."""
         except_role_ids = None
@@ -96,18 +130,18 @@ class MentionWarn(commands.Cog):
             message=message,
             except_role_ids=except_role_ids
         )
-        await ctx.send(str(ws.dict()))
+
         async with self.config.guild(ctx.guild).warn_settings() as settings:
             if str(ws.user_id) in settings.keys():
                 await ctx.send("User already exists. Please `edit` or `remove` the setting")
                 return
-
             settings[str(ws.user_id)] = ws.dict()
-            await ctx.send("Config added")
+            await ctx.send(embed=self.settings_embed(ctx, ws, title="Added New Setting"))
 
-    @mentionwarnset.command(name="edit")
-    async def add_settings(self, ctx: Context, user: Member, message: str, *except_role_names):
-        """Edit an existing settinge."""
+    @checks.mod_or_permissions()
+    @mentionwarn.command(name="edit")
+    async def edit_settings(self, ctx: Context, user: Member, message: str, *except_role_names):
+        """Edit an existing settings."""
         async with self.config.guild(ctx.guild).warn_settings() as settings:
             if str(user.id) not in settings.keys():
                 await ctx.send(f"Cannot find settings for {str(user)}")
@@ -124,13 +158,14 @@ class MentionWarn(commands.Cog):
             message=message,
             except_role_ids=except_role_ids
         )
-        await ctx.send(str(ws.dict()))
+
         async with self.config.guild(ctx.guild).warn_settings() as settings:
             settings[str(ws.user_id)] = ws.dict()
-            await ctx.send("Config updated")
+            await ctx.send(embed=self.settings_embed(ctx, ws, title="Updated Setting"))
 
-    @mentionwarnset.command(name="delete", alises=['remove', 'rm'])
-    async def remove_settings(self, ctx:Context, user:Member):
+    @checks.mod_or_permissions()
+    @mentionwarn.command(name="delete", alises=['remove', 'rm'])
+    async def remove_settings(self, ctx: Context, user: Member):
         """Remove a setting about a user."""
         async with self.config.guild(ctx.guild).warn_settings() as settings:
             if str(user.id) not in settings.keys():
@@ -149,7 +184,7 @@ class MentionWarn(commands.Cog):
                 await ctx.send("Aborted")
 
     @commands.Cog.listener()
-    async def on_message(self, message:Message):
+    async def on_message(self, message: Message):
         """Warn users when user is mentioned in settings"""
         channel = message.channel
 
@@ -165,7 +200,17 @@ class MentionWarn(commands.Cog):
         if not guild:
             return
 
+        enabled = await self.config.guild(guild).enabled()
+        if not enabled:
+            return
+
         if not message.mentions:
+            return
+
+        if message.content.startswith('!'):
+            return
+
+        if message.content.startswith('?'):
             return
 
         mention_ids = [str(u.id) for u in message.mentions]
@@ -188,5 +233,3 @@ class MentionWarn(commands.Cog):
                     await channel.send(
                         f"{message.author.mention} {ws.message}"
                     )
-
-
