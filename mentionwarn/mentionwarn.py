@@ -17,6 +17,7 @@ from redbot.core.utils.predicates import ReactionPredicate
 UNIQUE_ID = 202011120640
 
 
+
 class WarnSetting(BaseModel):
     user_id: int
     guild_id: int
