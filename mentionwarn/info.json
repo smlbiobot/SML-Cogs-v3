@@ -3,7 +3,7 @@
     "short": "Mention Warn",
     "description": "Warn users for mentioning specific users.",
     "disabled": false,
-    "requirements": [""],
+    "requirements": ["pydantic"],
     "tags": ["warn", "mention", "utility", "pydantic"],
     "install_msg": "Thanks for installing. If you need help, please create new issue on my Github repo: https://github.com/smlbiobot/SML-Cogs-v3 or my Discord server: https://discord.gg/2dCJUN9"
 }
