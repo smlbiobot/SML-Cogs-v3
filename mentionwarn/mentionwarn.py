@@ -17,7 +17,6 @@ from redbot.core.utils.predicates import ReactionPredicate
 UNIQUE_ID = 202011120640
 
 
-
 class WarnSetting(BaseModel):
     user_id: int
     guild_id: int
@@ -184,8 +183,8 @@ class MentionWarn(commands.Cog):
             else:
                 await ctx.send("Aborted")
 
-    @commands.Cog.listener()
-    async def on_message(self, message: Message):
+    @commands.Cog.listener(name="on_message_without_command")
+    async def on_message_without_command(self, message: Message):
         """Warn users when user is mentioned in settings"""
         channel = message.channel
 
@@ -206,12 +205,6 @@ class MentionWarn(commands.Cog):
             return
 
         if not message.mentions:
-            return
-
-        if message.content.startswith('!'):
-            return
-
-        if message.content.startswith('?'):
             return
 
         mention_ids = [str(u.id) for u in message.mentions]
