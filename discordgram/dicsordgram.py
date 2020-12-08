@@ -169,7 +169,8 @@ class Discordgram(commands.Cog):
         em = bot_msg.embeds[0]
         em.add_field(
             name=author.display_name,
-            value=msg
+            value=msg,
+            inline=False,
         )
         em.timestamp = dt.datetime.now(tz=dt.timezone.utc)
 
