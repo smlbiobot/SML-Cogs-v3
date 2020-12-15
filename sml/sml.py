@@ -100,3 +100,21 @@ class SML(commands.Cog):
                 await ctx.send(f"Created {name} at {guild.name}")
 
             # await ctx.send(f"{name} - {ext}")
+
+    @commands.command(name="avatar")
+    async def avatar(self, ctx:Context, member:discord.Member=None):
+        if member is None:
+            member = ctx.author
+
+        try:
+            await ctx.send(
+                member.avatar_url_as(
+                    format='png',
+                    size=2048,
+                )
+            )
+        except discord.InvalidArgument:
+            pass
+
+
+
