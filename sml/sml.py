@@ -101,8 +101,30 @@ class SML(commands.Cog):
 
             # await ctx.send(f"{name} - {ext}")
 
+    @sml.command(name="usertest", aliases=['ut'])
+    @commands.is_owner()
+    async def usertest(self, ctx: Context, number):
+        """
+        Show prototypes based on number
+        :param ctx:
+        :param number:
+        :return:
+        """
+        urls = {
+            '1': 'https://xd.adobe.com/view/a66f240b-05f9-4b0f-b8ac-7d60f6339420-f33c',
+            '2': 'https://xd.adobe.com/view/2475a1bd-4985-4aa1-8f32-8ce1c7c28ecd-7126',
+            '3': 'https://xd.adobe.com/view/b87ce6ba-3e0c-4411-b412-2cdd44060365-ed2f',
+        }
+        url = urls.get(number)
+
+        if not url:
+            await ctx.send("Invalid number")
+            pass
+
+        await ctx.send(url)
+
     @commands.command(name="avatar")
-    async def avatar(self, ctx:Context, member:discord.Member=None):
+    async def avatar(self, ctx: Context, member: discord.Member = None):
         if member is None:
             member = ctx.author
 
@@ -115,6 +137,3 @@ class SML(commands.Cog):
             )
         except discord.InvalidArgument:
             pass
-
-
-
