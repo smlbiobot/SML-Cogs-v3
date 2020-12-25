@@ -123,6 +123,29 @@ class SML(commands.Cog):
 
         await ctx.send(url)
 
+    @sml.command(name='sho')
+    async def sho_add_2v2(self, ctx: Context, member: discord.Member = None):
+        """
+        Allow Sho to add 2v2 role for member
+        :param ctx:
+        :param member:
+        :return:
+        """
+        if ctx.author.id not in [
+            321151175292485632,  # show
+            209287691722817536,  # sml
+        ]:
+            await ctx.send("You don‘t have permission to run this command")
+            return
+
+        if member is None:
+            await ctx.send("You must include a member")
+            return
+
+        role = discord.utils.get(ctx.guild.roles, name='RR.2v2.SHO')
+        await member.add_roles(role, reason="SHO 2v2 member add")
+        await ctx.send(f"Added {str(role)} to {member.mention}")
+
     @commands.command(name="avatar")
     async def avatar(self, ctx: Context, member: discord.Member = None):
         if member is None:
