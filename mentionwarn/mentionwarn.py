@@ -195,7 +195,11 @@ class MentionWarn(commands.Cog):
         if not channel:
             return
 
-        guild = channel.guild
+        try:
+            guild = channel.guild
+        except AttributeError:
+            # DM has no guild
+            return
 
         if not guild:
             return
