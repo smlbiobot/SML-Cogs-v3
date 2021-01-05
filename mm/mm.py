@@ -533,7 +533,6 @@ class MemberManagement(commands.Cog):
         for page in pagify('\n'.join(out)):
             await ctx.send(page)
 
-
     async def remove_role(self, member, role, channel=None, reason=None):
         await member.remove_roles(
             role,
@@ -543,7 +542,6 @@ class MemberManagement(commands.Cog):
             await channel.send(
                 f"Removed {role} for {member}"
             )
-
 
     @commands.guild_only()
     @commands.command()
