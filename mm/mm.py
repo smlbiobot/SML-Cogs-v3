@@ -8,6 +8,7 @@ from redbot.core import checks
 from redbot.core import commands
 from redbot.core.bot import Red
 from redbot.core.utils.chat_formatting import box, pagify
+import asyncio
 
 BOT_COMMANDER_ROLES = ["Bot Commander", "High-Elder"]
 
@@ -531,3 +532,45 @@ class MemberManagement(commands.Cog):
 
         for page in pagify('\n'.join(out)):
             await ctx.send(page)
+
+
+    async def remove_role(self, member, role, channel=None, reason=None):
+        await member.remove_roles(
+            role,
+            reason=reason
+        )
+        if channel is not None:
+            await channel.send(
+                f"Removed {role} for {member}"
+            )
+
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.mod_or_permissions(manage_roles=True)
+    async def removerolefromall(self, ctx, role_name):
+        """Remove a role from all members with the role."""
+        role = discord.utils.get(ctx.guild.roles, name=role_name)
+        if role is None:
+            await ctx.send("Role not found.")
+            return
+        guild = ctx.guild
+
+        members = []
+        for member in guild.members:
+            if role in member.roles:
+                members.append(member)
+        if not members:
+            await ctx.send("No members with that role found")
+            return
+
+        async with ctx.typing():
+            tasks = [
+                self.remove_role(member, role, channel=ctx.channel)
+                for member in members
+            ]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for m, r in zip(members, results):
+                if isinstance(r, Exception):
+                    await ctx.send("Error removing role from {}".format(m))
+            await ctx.send("Task completed.")
