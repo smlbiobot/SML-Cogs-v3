@@ -1,8 +1,5 @@
-import datetime as dt
-
 import discord
 from discord import Message
-from discord import TextChannel
 from redbot.core import checks
 from redbot.core import commands
 from redbot.core import Config
