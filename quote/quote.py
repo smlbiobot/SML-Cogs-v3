@@ -1,6 +1,7 @@
 import json
 from typing import Literal
 
+import aiohttp
 import discord
 from redbot.core import checks
 from redbot.core import commands
@@ -10,6 +11,7 @@ from redbot.core.config import Config
 from pydantic import BaseModel
 import datetime as dt
 from typing import Optional
+import re
 
 RequestType = Literal["discord_deleted_user", "owner", "user", "user_strict"]
 
@@ -19,6 +21,20 @@ class QuoteItem(BaseModel):
     text: str
     author_id: Optional[int] = None
     timestamp: Optional[dt.datetime] = None
+
+    @property
+    def urls(self):
+        urls = re.findall(
+            f'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
+            self.text
+        )
+        return urls
+
+
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
 
 
 class Quote(commands.Cog):
@@ -89,6 +105,31 @@ class Quote(commands.Cog):
         """Quote Settings."""
         if ctx.invoked_subcommand is None:
             await ctx.send(embed=await self.current_settings_embed(ctx.guild))
+
+    @quoteset.command(name="import")
+    @checks.is_owner()
+    async def quoteset_import(self, ctx: Context):
+        """Import old data."""
+        if not ctx.message.attachments:
+            await ctx.send("You must include a JSON attachment")
+            return
+
+        attach = ctx.message.attachments[0]
+        url = attach.url
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                data = await resp.json()
+
+        async with self.config.guild(ctx.guild).quotes() as quotes:
+            for k, v in data.items():
+                key = k.lower()
+
+                item = QuoteItem(
+                    key=key,
+                    text=v,
+                )
+                quotes[key] = json.loads(item.json())
 
     @quoteset.command(name="addrole")
     @checks.mod_or_permissions(manage_roles=True)
@@ -201,22 +242,32 @@ class Quote(commands.Cog):
         em = discord.Embed()
         async with self.config.guild(guild).quotes() as quotes:
             keys = sorted(quotes.keys())
-            value = "None"
-            if keys:
-                value = ", ".join(keys)
-            em.add_field(
-                name="Quote names",
-                value=value
-            )
-        return em
+            if not keys:
+                em.add_field(
+                    name="Quote names",
+                    value="None"
+                )
+            else:
+                for group in chunks(keys, 20):
+                    em.add_field(
+                        name=".",
+                        value=", ".join(group),
+                        inline=False
+                    )
 
+        return em
 
     @quoteset.command(name="list", aliases=['l'])
     async def quoteset_list(self, ctx: Context):
+        """List available quotes"""
         await ctx.send(embed=await self.available_votes_embed(ctx.guild))
 
     @commands.command(aliases=['q'])
     async def quote(self, ctx: Context, name):
+        """Display a quote.
+
+        Use !qs list to see a list of quotes.
+        """
         name = name.lower()
         async with self.config.guild(ctx.guild).quotes() as quotes:
             raw = quotes.get(name)
@@ -231,6 +282,16 @@ class Quote(commands.Cog):
                 title="Quote",
                 description=item.text,
             )
+
+            if item.urls:
+                for url in item.urls:
+                    try:
+                        em.set_image(url=url)
+                    except:
+                        pass
+                    else:
+                        break
+
             if item.author_id:
                 author = discord.utils.get(ctx.guild.members, id=item.author_id)
                 if author:
