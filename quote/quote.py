@@ -273,7 +273,7 @@ class Quote(commands.Cog):
             raw = quotes.get(name)
             if not raw:
                 await ctx.send("Cannot find quote with that name")
-                await ctx.send(embed=await self.available_votes_embed(ctx.guild))
+                await ctx.send("Type `!qs list` to see a list of quotes")
                 return
 
             item = QuoteItem.parse_obj(raw)
