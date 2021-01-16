@@ -1,12 +1,18 @@
+import logging
 import os
 
 from discord import Guild
+from redbot.cogs.cleanup import Cleanup
+from redbot.cogs.cleanup.converters import PositiveInt
+from redbot.core import checks
 from redbot.core import commands
 from redbot.core import Config
 from redbot.core.bot import Red
 from redbot.core.commands import Context
 from typing import Optional
 import discord
+from redbot.core.utils.chat_formatting import humanize_number
+from redbot.core.utils.mod import mass_purge
 
 UNIQUE_ID = 202011010631
 
@@ -145,6 +151,52 @@ class SML(commands.Cog):
         role = discord.utils.get(ctx.guild.roles, name='RR.2v2.SHO')
         await member.add_roles(role, reason="SHO 2v2 member add")
         await ctx.send(f"Added {str(role)} to {member.mention}")
+
+    @sml.command(name="cleanupuser")
+    @commands.guild_only()
+    @checks.mod_or_permissions(manage_messages=True)
+    @commands.bot_has_permissions(manage_messages=True)
+    async def cleanup_user_messages(self, ctx: Context, user: str, number: PositiveInt, delete_pinned: bool = False):
+        """
+        Delete [number] of messages from user in all channels
+        """
+
+        member = None
+        try:
+            member = await commands.MemberConverter().convert(ctx, user)
+        except commands.BadArgument:
+            try:
+                _id = int(user)
+            except ValueError:
+                raise commands.BadArgument()
+        else:
+            _id = member.id
+
+        def check(m):
+            if m.author.id == _id:
+                return True
+            else:
+                return False
+
+        async with ctx.typing():
+            await ctx.send("If you have many channels, this could take a while to complete…")
+            for channel in ctx.guild.channels:
+                try:
+                    to_delete = await Cleanup.get_messages_for_deletion(
+                        channel=channel,
+                        number=number,
+                        check=check,
+                        before=ctx.message,
+                        delete_pinned=delete_pinned,
+                    )
+                except AttributeError:
+                    # AttributeError: 'CategoryChannel' object has no attribute 'history'
+                    pass
+                else:
+                    if to_delete:
+                        await mass_purge(to_delete, channel)
+
+            await ctx.send("Completed.")
 
     @commands.command(name="avatar")
     async def avatar(self, ctx: Context, member: discord.Member = None):
