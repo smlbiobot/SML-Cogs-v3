@@ -1,6 +1,7 @@
-import logging
 import os
+from typing import Optional
 
+import discord
 from discord import Guild
 from redbot.cogs.cleanup import Cleanup
 from redbot.cogs.cleanup.converters import PositiveInt
@@ -9,9 +10,6 @@ from redbot.core import commands
 from redbot.core import Config
 from redbot.core.bot import Red
 from redbot.core.commands import Context
-from typing import Optional
-import discord
-from redbot.core.utils.chat_formatting import humanize_number
 from redbot.core.utils.mod import mass_purge
 
 UNIQUE_ID = 202011010631
