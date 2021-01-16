@@ -176,6 +176,8 @@ class SML(commands.Cog):
             else:
                 return False
 
+        number = int(number)
+
         async with ctx.typing():
             await ctx.send("If you have many channels, this could take a while to complete…")
             for channel in ctx.guild.channels:
