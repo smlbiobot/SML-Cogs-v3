@@ -150,6 +150,13 @@ class SML(commands.Cog):
         await member.add_roles(role, reason="SHO 2v2 member add")
         await ctx.send(f"Added {str(role)} to {member.mention}")
 
+    @sml.command(name="sayc")
+    @commands.guild_only()
+    @checks.mod_or_permissions()
+    async def sayc(self, ctx, channel: discord.TextChannel, *, msg):
+        """Have bot say stuff in channel. Remove command after run."""
+        await channel.send(msg)
+
     @sml.command(name="cleanupuser")
     @commands.guild_only()
     @checks.mod_or_permissions(manage_messages=True)
