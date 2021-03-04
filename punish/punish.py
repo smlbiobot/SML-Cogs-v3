@@ -54,9 +54,10 @@ class Punish(commands.Cog):
         for task in self.periodic_tasks:
             task.start()
 
+    @checks.mod_or_permissions()
     @commands.group()
     async def punish(self, ctx):
-        """SML utility functions"""
+        """Punish peope"""
         pass
 
     def make_key(self, member_id):
