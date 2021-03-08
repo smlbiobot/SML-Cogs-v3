@@ -114,6 +114,10 @@ class Timer(commands.Cog):
         for task in self.periodic_tasks:
             task.start()
 
+    def cog_unload(self):
+        for task in self.periodic_tasks:
+            task.cancel()
+
     @checks.mod_or_permissions()
     @commands.group()
     async def timer(self, ctx):
@@ -223,3 +227,6 @@ class Timer(commands.Cog):
     @run_periodic_task.before_loop
     async def before_run_mention_member_task(self):
         await self.bot.wait_until_red_ready()
+
+
+

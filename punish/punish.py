@@ -44,13 +44,11 @@ class Punish(commands.Cog):
             self.run_mention_member_task,
         ]
 
-    async def initialize(self):
-        # await self.bot.wait_until_red_ready()
-        # for task in self.periodic_tasks:
-        #     task.add_exception_type(
-        #
-        #     )
+    def cog_unload(self):
+        for task in self.periodic_tasks:
+            task.cancel()
 
+    async def initialize(self):
         for task in self.periodic_tasks:
             task.start()
 
