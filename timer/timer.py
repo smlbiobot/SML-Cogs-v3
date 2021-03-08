@@ -141,7 +141,37 @@ class Timer(commands.Cog):
     @timer.command(name="settings", pass_context=True)
     async def timer_settings(self, ctx: Context):
         """Settings."""
-        pass
+        out = []
+
+        for guild in self.bot.guilds:
+            async with self.config.guild(guild).timers() as timers:
+                o = []
+                to_remove_keys = []
+                for k, config in timers.copy().items():
+                    timer_config = TimerConfig.parse_obj(config)
+                    channel = discord.utils.get(guild.channels, id=timer_config.channel_id)
+                    if not channel:
+                        to_remove_keys.append(k)
+                        continue
+
+                    o += [
+                        f"{timer_config.timer_name}: {channel.mention}: {timer_config.timer_iso}",
+                    ]
+
+                if to_remove_keys:
+                    for k in to_remove_keys:
+                        timers.pop(k, None)
+
+                if o:
+                    out += [
+                        f"",
+                        f"{guild.name}",
+                    ] + o
+
+        if out:
+            await ctx.send('\n'.join(out))
+        else:
+            await ctx.send("No config for this guild.")
 
     @checks.is_owner()
     @commands.guild_only()
@@ -183,7 +213,7 @@ class Timer(commands.Cog):
 
         await ctx.send("Added timer.")
 
-    @tasks.loop(seconds=59)
+    @tasks.loop(seconds=10)
     async def run_periodic_task(self):
         for guild in self.bot.guilds:
             async with self.config.guild(guild).timers() as timers:
