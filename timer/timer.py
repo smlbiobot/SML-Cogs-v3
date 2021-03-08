@@ -103,20 +103,10 @@ class Timer(commands.Cog):
             'timers': {},
         }
         self.config.register_guild(**default_guild)
-
-    @property
-    def periodic_tasks(self):
-        return [
-            self.run_periodic_task,
-        ]
-
-    async def initialize(self):
-        for task in self.periodic_tasks:
-            task.start()
+        self.run_periodic_task.start()
 
     def cog_unload(self):
-        for task in self.periodic_tasks:
-            task.cancel()
+        self.run_periodic_task.cancel()
 
     @checks.mod_or_permissions()
     @commands.group()
@@ -213,7 +203,7 @@ class Timer(commands.Cog):
 
         await ctx.send("Added timer.")
 
-    @tasks.loop(seconds=10)
+    @tasks.loop(seconds=10.0)
     async def run_periodic_task(self):
         for guild in self.bot.guilds:
             async with self.config.guild(guild).timers() as timers:
