@@ -183,7 +183,7 @@ class Timer(commands.Cog):
 
         await ctx.send("Added timer.")
 
-    @tasks.loop(seconds=10)
+    @tasks.loop(seconds=59)
     async def run_periodic_task(self):
         for guild in self.bot.guilds:
             async with self.config.guild(guild).timers() as timers:
