@@ -75,6 +75,12 @@ class Todo(commands.Cog):
         if payload.event_type != 'REACTION_ADD':
             return
 
+        str_emoji = str(payload.emoji)
+
+        # invalid emojis
+        if str_emoji not in ["✅", "❌", "🦋"]:
+            return
+
         # message has no channel
         channel = self.bot.get_channel(payload.channel_id)
         if not channel:
@@ -105,11 +111,7 @@ class Todo(commands.Cog):
         if payload.user_id == self.bot.user.id:
             return
 
-        str_emoji = str(payload.emoji)
 
-        # invalid emojis
-        if str_emoji not in ["✅", "❌", "🦋"]:
-            return
 
         em = message.embeds[0]
         new_embed = em.copy()
