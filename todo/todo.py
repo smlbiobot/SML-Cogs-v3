@@ -81,7 +81,10 @@ class Todo(commands.Cog):
             return
 
         # invalid message
-        message = await channel.fetch_message(payload.message_id)
+        try:
+            message = await channel.fetch_message(payload.message_id)
+        except discord.NotFound:
+            return
         if not message:
             return
 

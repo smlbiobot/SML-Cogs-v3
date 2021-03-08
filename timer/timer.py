@@ -200,8 +200,9 @@ class Timer(commands.Cog):
 
                         timers[k] = timer_config.dict()
                     else:
-                        message = await channel.fetch_message(timer_config.message_id)
-                        if not message:
+                        try:
+                            message = await channel.fetch_message(timer_config.message_id)
+                        except discord.NotFound:
                             to_remove_keys.append(k)
                             continue
 
