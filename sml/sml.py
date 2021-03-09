@@ -220,4 +220,60 @@ class SML(commands.Cog):
         except discord.InvalidArgument:
             pass
 
+    @sml.command(name="emoterole")
+    @commands.guild_only()
+    @checks.is_owner()
+    async def emote_role(self, ctx:Context):
+        """Check that everyone who reacted as the emote role."""
+        healer_emoji = '<:healercake:815931746977447967>'
+
+        message_id = 815932003467132958
+        channel = discord.utils.get(ctx.guild.text_channels, name='self-roles')
+
+        async def find_reaction():
+            message = await channel.fetch_message(message_id)
+
+            healer_reaction = None
+
+            for reaction in message.reactions:
+                if not reaction.custom_emoji:
+                    continue
+
+                emoji = f"<:{reaction.emoji.name}:{reaction.emoji.id}>"
+
+                if emoji != healer_emoji:
+                    continue
+
+                healer_reaction = reaction
+                break
+
+            return healer_reaction
+
+
+        healer_reaction = await find_reaction()
+
+        if not healer_reaction:
+            await ctx.send("Cannot find healer reaction")
+
+        users = []
+        async for user in healer_reaction.users():
+            if user:
+                users.append(user)
+
+        role = discord.utils.get(ctx.guild.roles, name='emote.giveaway')
+        # check for role
+        for u in users:
+            member = discord.utils.get(
+                ctx.guild.members, id=u.id
+            )
+            if not member:
+                continue
+            if role not in member.roles:
+                print(u)
+                await u.add_roles(
+                    role,
+                    reason='Re-add Emote Giveaway rolw'
+                )
+
+
 
