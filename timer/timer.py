@@ -1,9 +1,9 @@
-import asyncio
 import datetime as dt
 from typing import Optional
 
 import discord
 import humanfriendly
+from discord import DiscordException
 from discord.ext import tasks
 from pydantic import BaseModel
 from redbot.core import checks
@@ -89,7 +89,7 @@ class TimerConfig(BaseModel):
         )
         return em
 
-    def message_link(self, guild:discord.Guild) -> Optional[str]:
+    def message_link(self, guild: discord.Guild) -> Optional[str]:
         """
         https://discord.com/channels/528327242875535372/771733836060426281/818783242903355393
         :param guild:
@@ -98,8 +98,6 @@ class TimerConfig(BaseModel):
         if not self.message_id:
             return None
         return f"https://discord.com/channels/{guild.id}/{self.channel_id}/{self.message_id}"
-
-
 
 
 class Timer(commands.Cog):
@@ -115,6 +113,10 @@ class Timer(commands.Cog):
             'timers': {},
         }
         self.config.register_guild(**default_guild)
+
+        self.run_periodic_task.add_exception_type(
+            DiscordException,
+        )
         self.run_periodic_task.start()
 
     def cog_unload(self):
@@ -167,9 +169,9 @@ class Timer(commands.Cog):
 
                 if o:
                     out += [
-                        f"",
-                        f"{guild.name}",
-                    ] + o
+                               f"",
+                               f"{guild.name}",
+                           ] + o
 
         if out:
             await ctx.send('\n'.join(out))
@@ -260,6 +262,3 @@ class Timer(commands.Cog):
     @run_periodic_task.before_loop
     async def before_run_mention_member_task(self):
         await self.bot.wait_until_red_ready()
-
-
-
