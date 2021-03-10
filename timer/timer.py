@@ -89,6 +89,18 @@ class TimerConfig(BaseModel):
         )
         return em
 
+    def message_link(self, guild:discord.Guild) -> Optional[str]:
+        """
+        https://discord.com/channels/528327242875535372/771733836060426281/818783242903355393
+        :param guild:
+        :return:
+        """
+        if not self.message_id:
+            return None
+        return f"https://discord.com/channels/{guild.id}/{self.channel_id}/{self.message_id}"
+
+
+
 
 class Timer(commands.Cog):
     """Timer"""
@@ -146,6 +158,7 @@ class Timer(commands.Cog):
 
                     o += [
                         f"{timer_config.timer_name}: {channel.mention}: {timer_config.timer_iso}",
+                        f"{timer_config.message_link(guild)}"
                     ]
 
                 if to_remove_keys:
@@ -228,9 +241,9 @@ class Timer(commands.Cog):
                             message = await channel.fetch_message(timer_config.message_id)
                         except discord.NotFound:
                             to_remove_keys.append(k)
-                            continue
+                        else:
+                            await message.edit(embed=timer_config.embed())
 
-                        await message.edit(embed=timer_config.embed())
                 if to_remove_keys:
                     for k in to_remove_keys:
                         timers.pop(k, None)
