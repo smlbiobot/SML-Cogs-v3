@@ -186,29 +186,29 @@ class MentionWarn(commands.Cog):
     @commands.Cog.listener(name="on_message_without_command")
     async def on_message_without_command(self, message: Message):
         """Warn users when user is mentioned in settings"""
-        channel = message.channel
-
-        # iggnore bots
-        if message.author.bot:
-            return
-
-        if not channel:
-            return
 
         try:
+            channel = message.channel
+
+            # iggnore bots
+            if message.author.bot:
+                return
+            if not channel:
+                return
+
             guild = channel.guild
+
+            if not guild:
+                return
+
+            enabled = await self.config.guild(guild).enabled()
+            if not enabled:
+                return
+
+            if not message.mentions:
+                return
         except AttributeError:
             # DM has no guild
-            return
-
-        if not guild:
-            return
-
-        enabled = await self.config.guild(guild).enabled()
-        if not enabled:
-            return
-
-        if not message.mentions:
             return
 
         mention_ids = [str(u.id) for u in message.mentions]
