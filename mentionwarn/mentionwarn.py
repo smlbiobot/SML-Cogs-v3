@@ -41,12 +41,14 @@ class MentionWarn(commands.Cog):
         }
         self.config.register_guild(**default_guild)
 
+    @commands.guild_only()
     @commands.group()
     @checks.mod_or_permissions()
     async def mentionwarn(self, ctx):
         """Mention Warn Settings"""
         pass
 
+    @commands.guild_only()
     @checks.mod_or_permissions()
     @mentionwarn.command(name="toggle")
     async def toggle_settings(self, ctx: Context):
@@ -60,6 +62,7 @@ class MentionWarn(commands.Cog):
         else:
             await ctx.send("Warnings disabled")
 
+    @commands.guild_only()
     @checks.mod_or_permissions()
     @mentionwarn.command(name="clear")
     async def clear_all_settings(self, ctx: Context):
@@ -79,6 +82,7 @@ class MentionWarn(commands.Cog):
             else:
                 await ctx.send("No settings found (already cleared).")
 
+    @commands.guild_only()
     @checks.mod_or_permissions()
     @mentionwarn.command(name="list")
     async def list_settings(self, ctx: Context):
@@ -115,6 +119,7 @@ class MentionWarn(commands.Cog):
         em.add_field(name="Except Roles", value=roles)
         return em
 
+    @commands.guild_only()
     @checks.mod_or_permissions()
     @mentionwarn.command(name="add")
     async def add_settings(self, ctx: Context, user: Member, message: str, *except_role_names):
@@ -138,6 +143,7 @@ class MentionWarn(commands.Cog):
             settings[str(ws.user_id)] = ws.dict()
             await ctx.send(embed=self.settings_embed(ctx, ws, title="Added New Setting"))
 
+    @commands.guild_only()
     @checks.mod_or_permissions()
     @mentionwarn.command(name="edit")
     async def edit_settings(self, ctx: Context, user: Member, message: str, *except_role_names):
@@ -163,6 +169,7 @@ class MentionWarn(commands.Cog):
             settings[str(ws.user_id)] = ws.dict()
             await ctx.send(embed=self.settings_embed(ctx, ws, title="Updated Setting"))
 
+    @commands.guild_only()
     @checks.mod_or_permissions()
     @mentionwarn.command(name="delete", alises=['remove', 'rm'])
     async def remove_settings(self, ctx: Context, user: Member):
