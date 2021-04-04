@@ -223,7 +223,7 @@ class SML(commands.Cog):
     @sml.command(name="emoterole")
     @commands.guild_only()
     @checks.is_owner()
-    async def emote_role(self, ctx:Context):
+    async def emote_role(self, ctx: Context):
         """Check that everyone who reacted as the emote role."""
         healer_emoji = '<:healercake:815931746977447967>'
 
@@ -248,7 +248,6 @@ class SML(commands.Cog):
                 break
 
             return healer_reaction
-
 
         healer_reaction = await find_reaction()
 
@@ -275,5 +274,10 @@ class SML(commands.Cog):
                     reason='Re-add Emote Giveaway rolw'
                 )
 
-
-
+    @commands.command(name="vote")
+    async def vote(self, ctx: Context, message_id: str = None):
+        await ctx.message.delete()
+        messages = await ctx.channel.history(limit=1).flatten()
+        msg = messages[0]
+        await msg.add_reaction('✅')
+        await msg.add_reaction('❌')
