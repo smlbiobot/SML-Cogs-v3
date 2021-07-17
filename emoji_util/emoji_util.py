@@ -41,6 +41,6 @@ class EmojiUtil(commands.Cog):
                 e = ""
             emojis.append(e)
 
-        out = "\n".join(emojis)
+        out = " ".join(emojis)
 
         await ctx.send(f"```{out}```")
