@@ -1,0 +1,12 @@
+{
+    "author": ["SML"],
+    "short": "NLP",
+    "description": "Natural Language Processing analysis.",
+    "disabled": false,
+    "requirements": [
+      "textblob"
+    ],
+    "tags": ["nlp", "langauge", "text"],
+    "status": "0.1",
+    "install_msg": "Thanks for installing. If you need help, please create new issue on my Github repo: https://github.com/smlbiobot/SML-Cogs-v3 or my Discord server: https://discord.gg/2dCJUN9"
+}
