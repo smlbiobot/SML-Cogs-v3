@@ -47,6 +47,13 @@ class Todo(commands.Cog):
         msg = await ctx.send(f"To-do channel set to {channel.mention}")
         await msg.delete(delay=5)
 
+    @todoset.command(name="channel_rm")
+    async def todoset_channel_remove(self, ctx):
+        """Remove channel for tasks"""
+        await self.config.guild(ctx.guild).task_channel_id.set(None)
+        msg = await ctx.send(f"To-do channel removed")
+        await msg.delete(delay=5)
+
     @commands.mod_or_permissions()
     @commands.command(name="todo")
     async def todo(self, ctx, *, message):
@@ -54,6 +61,10 @@ class Todo(commands.Cog):
         Add a todo item
         """
         channel_id = await self.config.guild(ctx.guild).task_channel_id()
+        if not channel_id:
+            await ctx.send("Channel is not set, or does not exist")
+            return
+
         channel = self.bot.get_channel(channel_id)
 
         if not channel:
