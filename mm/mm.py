@@ -1,14 +1,16 @@
 import argparse
+import asyncio
 import itertools
 from random import choice
 
 import discord
-from redbot.core import Config
 from redbot.core import checks
 from redbot.core import commands
+from redbot.core import Config
 from redbot.core.bot import Red
-from redbot.core.utils.chat_formatting import box, pagify
-import asyncio
+from redbot.core.utils.chat_formatting import box
+from redbot.core.utils.chat_formatting import pagify
+from redbot.core.utils.mod import is_mod_or_superior
 
 BOT_COMMANDER_ROLES = ["Bot Commander", "High-Elder"]
 
@@ -23,6 +25,41 @@ def grouper(n, iterable, fillvalue=None):
     return (
         [e for e in t if e is not None]
         for t in itertools.zip_longest(*args))
+
+
+def check_is_mod_or_has_roles(role_names=None):
+    """
+    Decorator: check if author is mod
+    :return:
+    """
+
+    async def predicate(ctx):
+        # if is mod
+        if await is_mod_or_superior(ctx.bot, ctx.author):
+            return True
+
+        try:
+            roles = ctx.guild.roles
+        except AttributeError:
+            # guild is None
+            return False
+
+        if role_names is not None:
+
+            permitted_roles = [
+                discord.utils.get(roles, name=name)
+                for name in role_names
+            ]
+
+            for role in permitted_roles:
+                if not role:
+                    continue
+                if role in ctx.author.roles:
+                    return True
+
+        return False
+
+    return commands.check(predicate)
 
 
 class MemberManagement(commands.Cog):
@@ -80,8 +117,8 @@ class MemberManagement(commands.Cog):
         return parser
 
     @commands.guild_only()
+    @check_is_mod_or_has_roles(["Staff", "FamilyLead", "BS-FamilyLead"])
     @commands.command()
-    @commands.mod_or_permissions()
     async def mm(self, ctx, *args):
         """Member management by roles.
 
