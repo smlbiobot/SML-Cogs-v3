@@ -81,7 +81,7 @@ class MemberManagement(commands.Cog):
 
     @commands.guild_only()
     @commands.command()
-    @commands.has_any_role(*BOT_COMMANDER_ROLES)
+    @commands.mod_or_permissions()
     async def mm(self, ctx, *args):
         """Member management by roles.
 
