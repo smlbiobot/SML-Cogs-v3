@@ -1,0 +1,14 @@
+discord~=1.7.3
+Red-DiscordBot
+textblob~=0.15.3
+aiohttp~=3.7.4.post0
+pydantic~=1.7.2
+humanfriendly~=8.2
+stringcase~=1.2.0
+addict~=2.4.0
+python-dateutil~=2.8.2
+elo~=0.1.1
+trueskill~=0.4.5
+aioelasticsearch~=0.5.2
+elasticsearch~=6.8.1
+requests~=2.25.1
