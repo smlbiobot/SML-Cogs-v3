@@ -1,27 +1,24 @@
+import re
 from typing import Optional
 from typing import Union
 
 import discord
-from discord import TextChannel
-from discord.ext.commands.converter import TextChannelConverter
+from discord.ext import commands as dpy_commands
 from discord.ext.commands.errors import BadArgument
-from redbot.cogs.cleanup.converters import PositiveInt
-
 from redbot.cogs.cleanup import Cleanup
-from redbot.core import checks
+from redbot.cogs.cleanup.converters import PositiveInt
+from redbot.core import commands
 from redbot.core import Config
 from redbot.core.bot import Red
-from redbot.core.commands import commands
 from redbot.core.commands import Context
 from redbot.core.utils.chat_formatting import humanize_number
 from redbot.core.utils.mod import mass_purge
-from discord.ext import commands as dpy_commands
-import re
 
 UNIQUE_ID = 20211211023313
 
 ID_REGEX = re.compile(r"([0-9]{15,20})")
 USER_MENTION_REGEX = re.compile(r"<@!?([0-9]{15,21})>$")
+
 
 class RawUserIdConverter(dpy_commands.Converter):
     """
@@ -52,24 +49,24 @@ class CleanupExt(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=UNIQUE_ID, force_registration=True)
 
-    @checks.mod_or_permissions()
+    @commands.mod_or_permissions()
     @commands.group('cleanupext')
     async def cleanupext(self, ctx):
         """Cleanup extension"""
         pass
 
-    @checks.mod_or_permissions()
+    @commands.mod_or_permissions()
     @commands.group(name='multicleanup', aliases=['mcleanup'])
-    async def multicleanup(self, ctx:Context):
+    async def multicleanup(self, ctx: Context):
         """Multi-channel cleanup"""
         pass
 
-    @checks.mod_or_permissions()
+    @commands.mod_or_permissions()
     @multicleanup.command(name="user")
     async def multicleanup_user(
             self,
-            ctx:Context,
-            user:Union[discord.Member, RawUserIdConverter],
+            ctx: Context,
+            user: Union[discord.Member, RawUserIdConverter],
             number: Optional[PositiveInt],
             delete_pinned: bool = False,
     ):
@@ -93,7 +90,7 @@ class CleanupExt(commands.Cog):
         for channel in ctx.guild.text_channels:
             to_delete = await Cleanup.get_messages_for_deletion(
                 channel=channel,
-                number=int(number),
+                number=PositiveInt(number),
                 check=check,
                 before=ctx.message,
                 delete_pinned=delete_pinned,
@@ -112,15 +109,3 @@ class CleanupExt(commands.Cog):
             )
 
             await mass_purge(to_delete, channel)
-
-
-
-
-
-
-
-
-
-
-
-
