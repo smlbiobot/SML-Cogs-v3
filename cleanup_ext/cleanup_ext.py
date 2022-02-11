@@ -49,19 +49,19 @@ class CleanupExt(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=UNIQUE_ID, force_registration=True)
 
-    @commands.mod_or_permissions()
+    @commands.mod_or_permissions(manage_messages=True)
     @commands.group('cleanupext')
     async def cleanupext(self, ctx):
         """Cleanup extension"""
         pass
 
-    @commands.mod_or_permissions()
+    @commands.mod_or_permissions(manage_messages=True)
     @commands.group(name='multicleanup', aliases=['mcleanup'])
     async def multicleanup(self, ctx: Context):
         """Multi-channel cleanup"""
         pass
 
-    @commands.mod_or_permissions()
+    @commands.mod_or_permissions(manage_messages=True)
     @multicleanup.command(name="user")
     async def multicleanup_user(
             self,
