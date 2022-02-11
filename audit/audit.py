@@ -1,8 +1,8 @@
 import argparse
 
 import discord
-from discord.ext import commands
 from redbot.core import checks
+from redbot.core import commands
 from redbot.core.bot import Red
 from redbot.core.commands import Context
 from redbot.core.utils.chat_formatting import box
@@ -27,7 +27,7 @@ def audit_parser():
     return parser
 
 
-class Audit:
+class Audit(commands.Cog):
     """Server audit logs."""
 
     def __init__(self, bot: Red):
@@ -55,8 +55,10 @@ class Audit:
             return
         async with ctx.typing():
             out = ['discord.AuditLogAction.channel_update']
-            async for entry in ctx.guild.audit_logs(limit=pargs.limit, reverse=pargs.reverse,
-                                                    action=discord.AuditLogAction.channel_update):
+            async for entry in ctx.guild.audit_logs(
+                    limit=pargs.limit,
+                    action=discord.AuditLogAction.channel_update
+            ):
                 try:
                     user = entry.user.name
                     created_at = entry.created_at.strftime("%Y-%m-%d %H:%M")
