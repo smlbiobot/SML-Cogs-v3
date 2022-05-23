@@ -73,7 +73,8 @@ class Todo(commands.Cog):
 
         em = discord.Embed(
             title=message,
-            color=discord.Color.blue()
+            color=discord.Color.blue(),
+            description=dt.datetime.now(tz=dt.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
         )
         message = await channel.send(embed=em)
         await message.add_reaction("✅")
@@ -122,8 +123,6 @@ class Todo(commands.Cog):
         if payload.user_id == self.bot.user.id:
             return
 
-
-
         em = message.embeds[0]
         new_embed = em.copy()
 
@@ -145,6 +144,7 @@ class Todo(commands.Cog):
         # add status update to channel so it will have new message
         em = discord.Embed(
             title=f'{str_emoji} {new_embed.title}',
+            description=new_embed.description,
             color=color,
             timestamp=dt.datetime.utcnow()
         )
